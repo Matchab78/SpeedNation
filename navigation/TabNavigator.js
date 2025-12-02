@@ -1,0 +1,75 @@
+import React from "react";
+import { View } from "react-native";
+import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
+import { Ionicons, FontAwesome5 } from "@expo/vector-icons";
+
+import HomeScreen from "../screens/HomeScreen";
+import EventsScreen from "../screens/EventsScreen";
+import CarsScreen from "../screens/CarsScreen";
+import SearchScreen from "../screens/SearchScreen";
+
+const Tab = createBottomTabNavigator();
+
+export default function TabNavigator() {
+  return (
+    <Tab.Navigator
+      initialRouteName="Home"
+      screenOptions={({ route }) => ({
+        headerShown: false,
+        tabBarStyle: {
+          position: "absolute",
+          backgroundColor: "#000000ff",
+          height: 70,
+          left: 20,
+          right: 20,
+          bottom: 20,
+          borderRadius: 25,
+          shadowColor: "#000",
+          shadowOpacity: 0.1,
+          shadowRadius: 10,
+          shadowOffset: { width: 0, height: 4 },
+          elevation: 6,
+          borderTopWidth: 0,
+        },
+        tabBarShowLabel: false,
+
+        tabBarIcon: ({ focused }) => {
+          let IconComponent = Ionicons;
+          let iconName = "";
+
+          switch (route.name) {
+            case "Home":
+              iconName = "home-outline";
+              break;
+            case "Search":
+              iconName = "search";
+              break;
+            case "Events":
+              IconComponent = FontAwesome5;
+              iconName = "map-marked-alt";
+              break;
+            case "Cars":
+              IconComponent = FontAwesome5;
+              iconName = "car";
+              break;
+          }
+
+          return (
+            <View style={{ alignItems: "center", justifyContent: "center" }}>
+              <IconComponent
+                name={iconName}
+                size={26}
+                color={focused ? "#fff" : "#8e8e8e"}
+              />
+            </View>
+          );
+        },
+      })}
+    >
+      <Tab.Screen name="Home" component={HomeScreen} />
+      <Tab.Screen name="Search" component={SearchScreen} />
+      <Tab.Screen name="Events" component={EventsScreen} />
+      <Tab.Screen name="Cars" component={CarsScreen} />
+    </Tab.Navigator>
+  );
+}
