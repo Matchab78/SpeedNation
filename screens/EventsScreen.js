@@ -46,7 +46,7 @@ export default function EventsScreen({ navigation }) {
 
   return (
     <ImageBackground
-      source={require("../assets/IMG_6006.JPG")}
+      source={require("../assets/eventscreen.jpeg")}
       style={styles.container}
       resizeMode="cover"
     >
