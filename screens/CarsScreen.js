@@ -69,7 +69,7 @@ export default function ProfileScreen() {
           <Text style={styles.name}>Mathis CHABAULT</Text>
           <Text style={styles.info}>étudiant</Text>
           <Text style={styles.info}>Paris, France — 21 ans</Text>
-          <Text style={styles.followers}>2 FOLLOWERS</Text>
+          <Text style={styles.followers}>2 M FOLLOWERS</Text>
         </View>
 
         <TouchableOpacity style={styles.menuButton}>

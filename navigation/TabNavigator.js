@@ -16,10 +16,12 @@ export default function TabNavigator() {
       initialRouteName="Home"
       screenOptions={({ route }) => ({
         headerShown: false,
+
+        // ---- STYLE DE LA NAVBAR ----
         tabBarStyle: {
           position: "absolute",
           backgroundColor: "#000000ff",
-          height: 70,
+          height: 80,                 // un peu plus haut pour bien centrer
           left: 20,
           right: 20,
           bottom: 20,
@@ -30,7 +32,15 @@ export default function TabNavigator() {
           shadowOffset: { width: 0, height: 4 },
           elevation: 6,
           borderTopWidth: 0,
+          paddingTop: 15,             // centre verticalement
+          paddingBottom: 15,          // remonte proprement les icônes
         },
+
+        tabBarItemStyle: {
+          justifyContent: "center",
+          alignItems: "center",
+        },
+
         tabBarShowLabel: false,
 
         tabBarIcon: ({ focused }) => {
@@ -41,13 +51,16 @@ export default function TabNavigator() {
             case "Home":
               iconName = "home-outline";
               break;
+
             case "Search":
               iconName = "search";
               break;
+
             case "Events":
               IconComponent = FontAwesome5;
               iconName = "map-marked-alt";
               break;
+
             case "Cars":
               IconComponent = FontAwesome5;
               iconName = "car";
@@ -55,7 +68,12 @@ export default function TabNavigator() {
           }
 
           return (
-            <View style={{ alignItems: "center", justifyContent: "center" }}>
+            <View
+              style={{
+                justifyContent: "center",
+                alignItems: "center",
+              }}
+            >
               <IconComponent
                 name={iconName}
                 size={26}
