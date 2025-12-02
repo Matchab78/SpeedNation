@@ -3,10 +3,11 @@ import { View } from "react-native";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { Ionicons, FontAwesome5 } from "@expo/vector-icons";
 
-import HomeScreen from "../screens/HomeScreen";
+import StackNavigator from "./StackNavigator";
 import EventsScreen from "../screens/EventsScreen";
 import CarsScreen from "../screens/CarsScreen";
 import SearchScreen from "../screens/SearchScreen";
+import ChatListScreen from "../screens/ChatListScreen";
 
 const Tab = createBottomTabNavigator();
 
@@ -16,12 +17,10 @@ export default function TabNavigator() {
       initialRouteName="Home"
       screenOptions={({ route }) => ({
         headerShown: false,
-
-        // ---- STYLE DE LA NAVBAR ----
         tabBarStyle: {
           position: "absolute",
           backgroundColor: "#000000ff",
-          height: 80,                 // un peu plus haut pour bien centrer
+          height: 80,
           left: 20,
           right: 20,
           bottom: 20,
@@ -32,15 +31,13 @@ export default function TabNavigator() {
           shadowOffset: { width: 0, height: 4 },
           elevation: 6,
           borderTopWidth: 0,
-          paddingTop: 15,             // centre verticalement
-          paddingBottom: 15,          // remonte proprement les icônes
+          paddingTop: 15,
+          paddingBottom: 15,
         },
-
         tabBarItemStyle: {
           justifyContent: "center",
           alignItems: "center",
         },
-
         tabBarShowLabel: false,
 
         tabBarIcon: ({ focused }) => {
@@ -51,16 +48,16 @@ export default function TabNavigator() {
             case "Home":
               iconName = "home-outline";
               break;
-
             case "Search":
               iconName = "search";
               break;
-
+            case "Messages":
+              iconName = "chatbubble-outline";
+              break;
             case "Events":
               IconComponent = FontAwesome5;
               iconName = "map-marked-alt";
               break;
-
             case "Cars":
               IconComponent = FontAwesome5;
               iconName = "car";
@@ -84,8 +81,9 @@ export default function TabNavigator() {
         },
       })}
     >
-      <Tab.Screen name="Home" component={HomeScreen} />
+      <Tab.Screen name="Home" component={StackNavigator} />
       <Tab.Screen name="Search" component={SearchScreen} />
+      <Tab.Screen name="Messages" component={ChatListScreen} />
       <Tab.Screen name="Events" component={EventsScreen} />
       <Tab.Screen name="Cars" component={CarsScreen} />
     </Tab.Navigator>
