@@ -74,7 +74,7 @@ export default function TabNavigator() {
               <IconComponent
                 name={iconName}
                 size={26}
-                color={focused ? "#fff" : "#8e8e8e"}
+                color={focused ? "#8916CB" : "#8e8e8e"}
               />
             </View>
           );

@@ -4,7 +4,8 @@ import {
   Text, 
   StyleSheet, 
   TouchableOpacity, 
-  FlatList 
+  FlatList,
+  ImageBackground 
 } from "react-native";
 
 export default function EventsScreen({ navigation }) {
@@ -36,7 +37,7 @@ export default function EventsScreen({ navigation }) {
       {/* Bouton + */}
       <TouchableOpacity
         style={styles.moreButton}
-        onPress={() => console.log("Voir détails :", item.title)}
+        onPress={() => navigation.navigate("EventDetail", { event: item })}
       >
         <Text style={styles.moreText}>more</Text>
       </TouchableOpacity>
@@ -44,7 +45,12 @@ export default function EventsScreen({ navigation }) {
   );
 
   return (
-    <View style={styles.container}>
+    <ImageBackground
+      source={require("../assets/IMG_6006.JPG")}
+      style={styles.container}
+      resizeMode="cover"
+    >
+      <View style={styles.overlay}>
 
       {/* HEADER */}
       <View style={styles.header}>
@@ -66,15 +72,19 @@ export default function EventsScreen({ navigation }) {
         contentContainerStyle={{ paddingHorizontal: 20 }}
       />
 
-    </View>
+      </View>
+    </ImageBackground>
   );
 }
 
 const styles = StyleSheet.create({
   container: { 
     flex: 1,
-    backgroundColor: "#4b4b4bff",
-    paddingTop: 50,
+  },
+
+  overlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
   },
 
   header: {
@@ -82,6 +92,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     paddingHorizontal: 20,
+    paddingTop: 50,
     marginBottom: 20,
   },
 
