@@ -4,7 +4,8 @@ import {
   Text, 
   StyleSheet, 
   TouchableOpacity, 
-  FlatList 
+  FlatList,
+  ImageBackground,
 } from "react-native";
 
 export default function EventsScreen({ navigation }) {
@@ -33,10 +34,21 @@ export default function EventsScreen({ navigation }) {
         <Text style={styles.cardInfo}>{item.location}</Text>
       </View>
 
-      {/* Bouton + */}
+      {/* Bouton more qui ouvre la page de détail */}
       <TouchableOpacity
         style={styles.moreButton}
-        onPress={() => console.log("Voir détails :", item.title)}
+        onPress={() =>
+          navigation.navigate("EventDetail", {
+            event: {
+              id: item.id,
+              title: item.title,
+              date: item.date,
+              time: item.time || "10:00",
+              location: item.location,
+              link: "https://speednation.events/" + item.id,
+            },
+          })
+        }
       >
         <Text style={styles.moreText}>more</Text>
       </TouchableOpacity>
@@ -44,36 +56,46 @@ export default function EventsScreen({ navigation }) {
   );
 
   return (
-    <View style={styles.container}>
+    <ImageBackground
+      source={require("../assets/rassopage.jpeg")}
+      style={styles.background}
+      resizeMode="cover"
+    >
+      <View style={styles.overlay}>
 
-      {/* HEADER */}
-      <View style={styles.header}>
-        <Text style={styles.title}>Événements</Text>
+        {/* HEADER */}
+        <View style={styles.header}>
+          <Text style={styles.title}>Événements</Text>
 
-        <TouchableOpacity 
-          style={styles.addButton}
-          onPress={() => console.log("Créer un événement")}
-        >
-          <Text style={styles.addText}>+</Text>
-        </TouchableOpacity>
+          <TouchableOpacity 
+            style={styles.addButton}
+            onPress={() => console.log("Créer un événement")}
+          >
+            <Text style={styles.addText}>+</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* LISTE */}
+        <FlatList
+          data={events}
+          keyExtractor={(item) => item.id}
+          renderItem={renderEventCard}
+          contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 40 }}
+        />
+
       </View>
-
-      {/* LISTE */}
-      <FlatList
-        data={events}
-        keyExtractor={(item) => item.id}
-        renderItem={renderEventCard}
-        contentContainerStyle={{ paddingHorizontal: 20 }}
-      />
-
-    </View>
+    </ImageBackground>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { 
+  background: {
     flex: 1,
-    backgroundColor: "#4b4b4bff",
+  },
+
+  overlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.5)",
     paddingTop: 50,
   },
 
