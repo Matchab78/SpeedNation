@@ -4,6 +4,7 @@ import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import TabNavigator from "./TabNavigator";
 import UserProfileScreen from "../screens/UserProfileScreen";
 import EventFormScreen from "../screens/EventFormScreen"; // ✅ AJOUT
+import ChatScreen from "../screens/ChatScreen"; // ✅ AJOUT MESSAGERIE
 
 const Stack = createNativeStackNavigator();
 
@@ -18,6 +19,18 @@ export default function StackNavigator() {
 
       {/* Formulaire Event (create/edit) */}
       <Stack.Screen name="EventForm" component={EventFormScreen} />
+
+      {/* Conversation de messagerie */}
+      <Stack.Screen 
+        name="Chat" 
+        component={ChatScreen}
+        options={{
+          headerShown: true,
+          headerStyle: { backgroundColor: '#000' },
+          headerTintColor: '#fff',
+          headerTitleStyle: { color: '#fff' },
+        }}
+      />
     </Stack.Navigator>
   );
 }
