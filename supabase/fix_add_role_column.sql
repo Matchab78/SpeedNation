@@ -3,7 +3,7 @@
 -- ============================================
 -- Exécutez ce script AVANT de créer la politique pour les événements
 -- Si vous avez déjà créé la table users sans le champ role
-
+-- psql -d events -f fix_add_role_column.sql
 -- Étape 1 : Ajouter la colonne role si elle n'existe pas
 DO $$ 
 BEGIN
