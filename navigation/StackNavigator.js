@@ -3,8 +3,9 @@ import { createNativeStackNavigator } from "@react-navigation/native-stack";
 
 import TabNavigator from "./TabNavigator";
 import UserProfileScreen from "../screens/UserProfileScreen";
-import EventFormScreen from "../screens/EventFormScreen"; // ✅ AJOUT
-import ChatScreen from "../screens/ChatScreen"; // ✅ AJOUT MESSAGERIE
+import EventFormScreen from "../screens/EventFormScreen";
+import ChatScreen from "../screens/ChatScreen";
+import CarDetailsScreen from "../screens/CarDetailsScreen"; // ✅ AJOUT
 
 const Stack = createNativeStackNavigator();
 
@@ -17,18 +18,21 @@ export default function StackNavigator() {
       {/* Profil public */}
       <Stack.Screen name="UserProfile" component={UserProfileScreen} />
 
+      {/* Détails voiture (quand on clique sur une photo) */}
+      <Stack.Screen name="CarDetails" component={CarDetailsScreen} />
+
       {/* Formulaire Event (create/edit) */}
       <Stack.Screen name="EventForm" component={EventFormScreen} />
 
       {/* Conversation de messagerie */}
-      <Stack.Screen 
-        name="Chat" 
+      <Stack.Screen
+        name="Chat"
         component={ChatScreen}
         options={{
           headerShown: true,
-          headerStyle: { backgroundColor: '#000' },
-          headerTintColor: '#fff',
-          headerTitleStyle: { color: '#fff' },
+          headerStyle: { backgroundColor: "#000" },
+          headerTintColor: "#fff",
+          headerTitleStyle: { color: "#fff" },
         }}
       />
     </Stack.Navigator>

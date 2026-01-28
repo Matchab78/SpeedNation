@@ -74,10 +74,11 @@ export default function UserProfileScreen({ route, navigation }) {
     setProfile(data);
   };
 
+  // ✅ AJOUT : on récupère aussi les infos voiture (optionnel, mais utile)
   const loadCars = async () => {
     const { data, error } = await supabase
       .from("cars")
-      .select("id, image_url, created_at")
+      .select("id, image_url, created_at, name, brand, model, year, price_purchased, power_hp")
       .eq("user_id", userId)
       .order("created_at", { ascending: false })
       .limit(60);
@@ -125,13 +126,11 @@ export default function UserProfileScreen({ route, navigation }) {
   const toggleFollow = async () => {
     if (followLoading) return;
 
-    // ✅ si pas connecté → message clair
     if (!meId) {
       Alert.alert("Connexion requise", "Tu dois être connecté pour follow.");
       return;
     }
 
-    // ✅ éviter follow soi-même
     if (isMe) {
       Alert.alert("Info", "Tu ne peux pas te follow toi-même.");
       return;
@@ -195,14 +194,19 @@ export default function UserProfileScreen({ route, navigation }) {
     });
   };
 
+  // ✅ CHANGEMENT : image cliquable -> CarDetails
   const renderPhoto = ({ item, index }) => {
     const marginRight = index % COLS !== COLS - 1 ? GRID_GAP : 0;
     const marginBottom = GRID_GAP;
 
     return (
-      <View style={{ width: ITEM_SIZE, height: ITEM_SIZE, marginRight, marginBottom }}>
+      <TouchableOpacity
+        activeOpacity={0.85}
+        onPress={() => navigation.navigate("CarDetails", { carId: item.id })}
+        style={{ width: ITEM_SIZE, height: ITEM_SIZE, marginRight, marginBottom }}
+      >
         <Image source={{ uri: item.image_url }} style={styles.gridImage} resizeMode="cover" />
-      </View>
+      </TouchableOpacity>
     );
   };
 
@@ -276,11 +280,7 @@ export default function UserProfileScreen({ route, navigation }) {
           )}
 
           {!isMe && !!user?.id && (
-            <TouchableOpacity
-              style={styles.messageBtn}
-              onPress={handleMessage}
-              activeOpacity={0.85}
-            >
+            <TouchableOpacity style={styles.messageBtn} onPress={handleMessage} activeOpacity={0.85}>
               <Ionicons name="chatbubble-ellipses" size={16} color="#fff" />
               <Text style={styles.messageBtnText}>Message</Text>
             </TouchableOpacity>
@@ -363,10 +363,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderRadius: 14,
   },
-  messageBtnText: {
-    color: "#fff",
-    fontWeight: "700",
-  },
+  messageBtnText: { color: "#fff", fontWeight: "700" },
 
   gridImage: { width: "100%", height: "100%", backgroundColor: "#111" },
 
