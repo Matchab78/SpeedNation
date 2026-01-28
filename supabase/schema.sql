@@ -196,8 +196,3 @@ CREATE POLICY "Users can add favorites" ON car_favorites
 
 CREATE POLICY "Users can remove their own favorites" ON car_favorites
   FOR DELETE USING (auth.uid() = user_id);
-
-
--- ============================================
--- TEST
--- ============================================

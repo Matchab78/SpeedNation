@@ -152,4 +152,4 @@ CREATE POLICY "Only admins can create events" ON events
 -- Note : Vous pouvez supprimer l'ancienne table users après vérification
 -- DROP TABLE IF EXISTS users CASCADE;
 
--- TEST
+

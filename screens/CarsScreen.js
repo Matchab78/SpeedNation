@@ -1472,5 +1472,3 @@ const styles = StyleSheet.create({
   },
 });
 
-
-// TEST

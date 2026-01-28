@@ -25,4 +25,3 @@ export const TABLES = {
   EVENT_PARTICIPANTS: 'event_participants',
   CAR_FAVORITES: 'car_favorites',
 };
- // TEST
