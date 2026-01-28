@@ -1,0 +1,13 @@
+{
+  "expo": {
+    "name": "SpeedNation",
+    "slug": "SpeedNation-sdk54",
+    "entryPoint": "./index.js",
+    "sdkVersion": "54.0.0",
+    "platforms": [
+      "ios",
+      "android",
+      "web"
+    ]
+  }
+}
