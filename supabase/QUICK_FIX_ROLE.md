@@ -94,3 +94,4 @@ UPDATE users
 SET role = 'admin' 
 WHERE id = 'user-id-ici';
 ```
+
