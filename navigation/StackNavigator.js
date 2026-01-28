@@ -5,14 +5,27 @@ import TabNavigator from "./TabNavigator";
 import UserProfileScreen from "../screens/UserProfileScreen";
 import EventFormScreen from "../screens/EventFormScreen"; // ✅ AJOUT
 import ChatScreen from "../screens/ChatScreen"; // ✅ AJOUT MESSAGERIE
+import LoginScreen from "../screens/LoginScreen"; // ✅ AJOUT LOGIN
 
 const Stack = createNativeStackNavigator();
 
 export default function StackNavigator() {
   return (
-    <Stack.Navigator screenOptions={{ headerShown: false }}>
+    <Stack.Navigator
+      initialRouteName="Tabs"
+      screenOptions={{ headerShown: false }}
+    >
       {/* Tabs */}
       <Stack.Screen name="Tabs" component={TabNavigator} />
+
+      {/* Login */}
+      <Stack.Screen
+        name="LoginScreen"
+        component={LoginScreen}
+        options={{
+          headerShown: false,
+        }}
+      />
 
       {/* Profil public */}
       <Stack.Screen name="UserProfile" component={UserProfileScreen} />
@@ -25,10 +38,7 @@ export default function StackNavigator() {
         name="Chat" 
         component={ChatScreen}
         options={{
-          headerShown: true,
-          headerStyle: { backgroundColor: '#000' },
-          headerTintColor: '#fff',
-          headerTitleStyle: { color: '#fff' },
+          headerShown: false,
         }}
       />
     </Stack.Navigator>

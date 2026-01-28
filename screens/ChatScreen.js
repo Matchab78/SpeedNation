@@ -12,12 +12,29 @@ import {
   Image,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { supabase } from "../config/supabase";
 import { messagingService } from "../services/messagingService";
 import { useAuth } from "../utils/authContext";
 
 export default function ChatScreen({ route, navigation }) {
   const { user } = useAuth();
   const { conversationId, otherUser } = route.params || {};
+  const userId = user?.id;
+  
+  // Protection : afficher un message si non connecté
+  if (!user) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.errorContainer}>
+          <Ionicons name="lock-closed" size={60} color="#666" />
+          <Text style={styles.errorTitle}>Connexion requise</Text>
+          <Text style={styles.errorSubText}>
+            Connecte-toi pour accéder à tes messages
+          </Text>
+        </View>
+      </View>
+    );
+  }
   
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState("");
@@ -27,29 +44,72 @@ export default function ChatScreen({ route, navigation }) {
   const flatListRef = useRef(null);
 
   useEffect(() => {
-    if (!conversationId || !user) return;
+    if (!conversationId || !userId) return;
 
     loadMessages();
     
-    // S'abonner aux nouveaux messages
-    const subscription = messagingService.subscribeToMessages(
-      conversationId,
-      (newMessage) => {
-        setMessages(prev => [...prev, newMessage]);
-        // Auto-scroll vers le bas
-        setTimeout(() => {
-          flatListRef.current?.scrollToEnd({ animated: true });
-        }, 100);
-      }
-    );
+    // S'abonner aux nouveaux messages en temps réel
+    const subscription = supabase
+      .channel(`conversation:${conversationId}`)
+      .on('postgres_changes', 
+        { 
+          event: 'INSERT', 
+          schema: 'public', 
+          table: 'messages',
+          filter: `conversation_id=eq.${conversationId}`
+        }, 
+        (payload) => {
+          console.log('Nouveau message reçu:', payload.new);
+          // Ajouter le message immédiatement à la liste (avec dédoublonnage)
+          setMessages((prev) => {
+            const current = prev || [];
+            if (current.some((m) => m.id === payload.new.id)) return current;
+            return [...current, payload.new];
+          });
+          // Auto-scroll vers le bas avec une petite pause pour l'animation
+          setTimeout(() => {
+            flatListRef.current?.scrollToEnd({ animated: true });
+          }, 100);
+        }
+      )
+      .subscribe((status) => {
+        console.log('Status abonnement messages:', status);
+      });
 
     // Marquer les messages comme lus
-    messagingService.markMessagesAsRead(conversationId, user.id);
+    messagingService.markMessagesAsRead(conversationId, userId);
 
     return () => {
+      console.log('Nettoyage abonnement messages');
       subscription?.unsubscribe();
     };
-  }, [conversationId, user]);
+  }, [conversationId, userId]);
+
+  useEffect(() => {
+    if (!conversationId || !userId) return;
+
+    const intervalId = setInterval(async () => {
+      try {
+        const result = await messagingService.getConversationMessages(conversationId);
+        if (result?.error) return;
+
+        const incoming = result.messages || [];
+        setMessages((prev) => {
+          if (!prev || prev.length === 0) return incoming;
+
+          const prevLast = prev[prev.length - 1];
+          const incomingLast = incoming[incoming.length - 1];
+          if (!incomingLast) return prev;
+          if (prevLast?.id === incomingLast.id && prev.length === incoming.length) return prev;
+          return incoming;
+        });
+      } catch {
+        // no-op
+      }
+    }, 2000);
+
+    return () => clearInterval(intervalId);
+  }, [conversationId, userId]);
 
   useEffect(() => {
     // Masquer le header de navigation pour utiliser notre header personnalisé
@@ -82,21 +142,55 @@ export default function ChatScreen({ route, navigation }) {
     if (!newMessage.trim() || sending) return;
 
     setSending(true);
+    const messageContent = newMessage.trim();
+    
+    // Optimisme : ajouter le message immédiatement à l'UI
+    const optimisticMessage = {
+      id: `temp-${Date.now()}`, // ID temporaire
+      conversation_id: conversationId,
+      sender_id: userId,
+      content: messageContent,
+      created_at: new Date().toISOString(),
+      message_type: 'text',
+      is_deleted: false
+    };
+
+    setMessages(prev => [...prev, optimisticMessage]);
+    setNewMessage(""); // Vider le champ immédiatement
+    
+    // Auto-scroll vers le bas
+    setTimeout(() => {
+      flatListRef.current?.scrollToEnd({ animated: true });
+    }, 50);
+
     try {
       const result = await messagingService.sendMessage(
         conversationId,
-        user.id,
-        newMessage.trim()
+        userId,
+        messageContent
       );
       
       if (result.error) {
         console.error('Erreur envoi message:', result.error);
+        // En cas d'erreur, retirer le message optimiste
+        setMessages(prev => prev.filter(msg => msg.id !== optimisticMessage.id));
+        setNewMessage(messageContent); // Restaurer le contenu
         return;
       }
       
-      setNewMessage("");
+      // Remplacer le message optimiste par le vrai message
+      setMessages(prev => 
+        prev.map(msg => 
+          msg.id === optimisticMessage.id ? result.message : msg
+        )
+      );
+      
+      console.log('Message envoyé avec succès:', result.message);
     } catch (error) {
       console.error('Erreur sendMessage:', error);
+      // En cas d'erreur, retirer le message optimiste
+      setMessages(prev => prev.filter(msg => msg.id !== optimisticMessage.id));
+      setNewMessage(messageContent); // Restaurer le contenu
     } finally {
       setSending(false);
     }
@@ -234,6 +328,13 @@ export default function ChatScreen({ route, navigation }) {
           style={styles.messagesList}
           contentContainerStyle={styles.messagesContainer}
           showsVerticalScrollIndicator={false}
+          // Optimisations pour le temps réel
+          removeClippedSubviews={true}
+          maxToRenderPerBatch={10}
+          windowSize={10}
+          initialNumToRender={15}
+          // Animation douce pour les nouveaux items
+          ItemSeparatorComponent={() => <View style={{ height: 2 }} />}
         />
 
         <View style={styles.inputContainer}>
@@ -411,5 +512,25 @@ const styles = StyleSheet.create({
   },
   sendButtonDisabled: {
     backgroundColor: "#333",
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 40,
+  },
+  errorTitle: {
+    color: "#fff",
+    fontSize: 20,
+    fontWeight: "600",
+    marginTop: 16,
+    textAlign: "center",
+  },
+  errorSubText: {
+    color: "#888",
+    fontSize: 14,
+    textAlign: "center",
+    marginTop: 8,
+    lineHeight: 20,
   },
 });

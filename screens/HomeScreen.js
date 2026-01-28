@@ -28,7 +28,7 @@ export default function HomeScreen({ navigation }) {
             style={styles.profileButton}
             onPress={() => {
               // Naviguer vers l'onglet Cars qui affiche le profil
-              navigation.getParent()?.navigate("Cars");
+              navigation.navigate("Cars");
             }}
           >
             <Text style={styles.profileText}>
@@ -38,7 +38,7 @@ export default function HomeScreen({ navigation }) {
         ) : (
           <TouchableOpacity
             style={styles.loginButton}
-            onPress={() => navigation.navigate("Login")}
+            onPress={() => navigation.navigate("LoginScreen")}
           >
             <Text style={styles.loginText}>Login</Text>
           </TouchableOpacity>

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { 
   View, 
   Text, 
@@ -6,7 +6,10 @@ import {
   TouchableOpacity, 
   FlatList,
   ActivityIndicator,
-  Image
+  Image,
+  Alert,
+  Animated,
+  PanResponder
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { messagingService } from "../services/messagingService";
@@ -14,8 +17,26 @@ import { useAuth } from "../utils/authContext";
 
 export default function ChatListScreen({ navigation }) {
   const { user } = useAuth();
+  const userId = user?.id;
   const [conversations, setConversations] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  const openRowRef = useRef(null);
+
+  // Protection : afficher un message si non connecté
+  if (!user) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.errorContainer}>
+          <Ionicons name="lock-closed" size={60} color="#666" />
+          <Text style={styles.errorTitle}>Connexion requise</Text>
+          <Text style={styles.errorSubText}>
+            Connecte-toi pour accéder à tes messages
+          </Text>
+        </View>
+      </View>
+    );
+  }
 
   useEffect(() => {
     loadConversations();
@@ -29,11 +50,21 @@ export default function ChatListScreen({ navigation }) {
     return () => {
       subscription?.unsubscribe();
     };
-  }, [user.id]);
+  }, [userId]);
+
+  useEffect(() => {
+    if (!userId) return;
+
+    const intervalId = setInterval(() => {
+      loadConversations();
+    }, 5000);
+
+    return () => clearInterval(intervalId);
+  }, [userId]);
 
   const loadConversations = async () => {
     try {
-      const result = await messagingService.getUserConversations(user.id);
+      const result = await messagingService.getUserConversations(userId);
       if (result.error) {
         console.error('Erreur chargement conversations:', result.error);
         return;
@@ -51,6 +82,111 @@ export default function ChatListScreen({ navigation }) {
       conversationId: conversation.id,
       otherUser: conversation.otherUser
     });
+  };
+
+  const confirmHideConversation = (conversationId) => {
+    Alert.alert(
+      "Supprimer la conversation",
+      "Supprimer cette conversation uniquement pour toi ?",
+      [
+        { text: "Annuler", style: "cancel" },
+        {
+          text: "Supprimer",
+          style: "destructive",
+          onPress: async () => {
+            const res = await messagingService.hideConversation(conversationId, userId);
+            if (res?.error) {
+              console.error('Erreur hideConversation:', res.error);
+              return;
+            }
+            setConversations((prev) => (prev || []).filter((c) => c.id !== conversationId));
+          },
+        },
+      ]
+    );
+  };
+
+  const SwipeRow = ({ item }) => {
+    const translateX = useRef(new Animated.Value(0)).current;
+
+    const close = () => {
+      Animated.spring(translateX, { toValue: 0, useNativeDriver: true }).start();
+    };
+
+    const open = () => {
+      Animated.spring(translateX, { toValue: -88, useNativeDriver: true }).start();
+    };
+
+    const panResponder = useMemo(() => PanResponder.create({
+      onMoveShouldSetPanResponder: (_, gesture) => Math.abs(gesture.dx) > 6 && Math.abs(gesture.dy) < 10,
+      onPanResponderGrant: () => {
+        if (openRowRef.current && openRowRef.current !== close) {
+          openRowRef.current();
+        }
+        openRowRef.current = close;
+      },
+      onPanResponderMove: (_, gesture) => {
+        const dx = Math.min(0, Math.max(-88, gesture.dx));
+        translateX.setValue(dx);
+      },
+      onPanResponderRelease: (_, gesture) => {
+        if (gesture.dx < -44) {
+          open();
+        } else {
+          close();
+        }
+      },
+      onPanResponderTerminate: close,
+    }), [translateX]);
+
+    return (
+      <View style={styles.swipeWrap}>
+        <View style={styles.swipeActions}>
+          <TouchableOpacity
+            style={styles.deleteBtn}
+            onPress={() => confirmHideConversation(item.id)}
+            activeOpacity={0.85}
+          >
+            <Ionicons name="trash" size={20} color="#fff" />
+            <Text style={styles.deleteText}>Supprimer</Text>
+          </TouchableOpacity>
+        </View>
+
+        <Animated.View
+          style={[styles.swipeCard, { transform: [{ translateX }] }]}
+          {...panResponder.panHandlers}
+        >
+          <TouchableOpacity
+            style={styles.chatBox}
+            onPress={() => openConversation(item)}
+            activeOpacity={0.85}
+          >
+            <View style={styles.chatHeader}>
+              {item.otherUser?.avatar_url ? (
+                <Image source={{ uri: item.otherUser.avatar_url }} style={styles.avatar} />
+              ) : (
+                <View style={[styles.avatar, { backgroundColor: '#2a2a2a', justifyContent: 'center', alignItems: 'center' }]}>
+                  <Ionicons name="person" size={24} color="#666" />
+                </View>
+              )}
+              <View style={styles.chatInfo}>
+                <Text style={styles.chatName}>
+                  {item.isGroup ? item.groupName : item.otherUser?.full_name || 'Utilisateur inconnu'}
+                </Text>
+                <Text style={styles.chatLastMsg}>
+                  {formatLastMessage(item.lastMessage)}
+                </Text>
+              </View>
+              {item.lastMessage && (
+                <Text style={styles.chatTime}>
+                  {formatTime(item.lastMessage.created_at)}
+                </Text>
+              )}
+            </View>
+          </TouchableOpacity>
+        </Animated.View>
+      </View>
+    );
   };
 
   const formatLastMessage = (message) => {
@@ -79,42 +215,7 @@ export default function ChatListScreen({ navigation }) {
     }
   };
 
-  const renderConversation = ({ item }) => (
-    <TouchableOpacity
-      style={styles.chatBox}
-      onPress={() => openConversation(item)}
-    >
-      <View style={styles.chatHeader}>
-        {item.otherUser?.avatar_url ? (
-          <Image
-            source={{ uri: item.otherUser.avatar_url }}
-            style={styles.avatar}
-          />
-        ) : (
-          <View style={[styles.avatar, { backgroundColor: '#2a2a2a', justifyContent: 'center', alignItems: 'center' }]}>
-            <Ionicons 
-              name="person" 
-              size={24} 
-              color="#666" 
-            />
-          </View>
-        )}
-        <View style={styles.chatInfo}>
-          <Text style={styles.chatName}>
-            {item.isGroup ? item.groupName : item.otherUser?.full_name || 'Utilisateur inconnu'}
-          </Text>
-          <Text style={styles.chatLastMsg}>
-            {formatLastMessage(item.lastMessage)}
-          </Text>
-        </View>
-        {item.lastMessage && (
-          <Text style={styles.chatTime}>
-            {formatTime(item.lastMessage.created_at)}
-          </Text>
-        )}
-      </View>
-    </TouchableOpacity>
-  );
+  const renderConversation = ({ item }) => <SwipeRow item={item} />;
 
   if (loading) {
     return (
@@ -174,6 +275,35 @@ const styles = StyleSheet.create({
     backgroundColor: "#1a1a1a",
     marginBottom: 12,
   },
+  swipeWrap: {
+    marginBottom: 12,
+  },
+  swipeActions: {
+    position: "absolute",
+    right: 0,
+    top: 0,
+    bottom: 0,
+    width: 88,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  deleteBtn: {
+    width: 76,
+    height: 62,
+    borderRadius: 12,
+    backgroundColor: "#d11a2a",
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 6,
+  },
+  deleteText: {
+    color: "#fff",
+    fontWeight: "700",
+    fontSize: 12,
+  },
+  swipeCard: {
+    borderRadius: 12,
+  },
   chatHeader: {
     flexDirection: "row",
     alignItems: "center",
@@ -225,6 +355,26 @@ const styles = StyleSheet.create({
     marginTop: 16,
   },
   emptySubText: {
+    color: "#888",
+    fontSize: 14,
+    textAlign: "center",
+    marginTop: 8,
+    lineHeight: 20,
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 40,
+  },
+  errorTitle: {
+    color: "#fff",
+    fontSize: 20,
+    fontWeight: "600",
+    marginTop: 16,
+    textAlign: "center",
+  },
+  errorSubText: {
     color: "#888",
     fontSize: 14,
     textAlign: "center",

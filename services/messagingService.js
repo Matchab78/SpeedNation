@@ -4,6 +4,18 @@ export const messagingService = {
   // Obtenir toutes les conversations d'un utilisateur
   async getUserConversations(userId) {
     try {
+      let hiddenConversationIds = new Set();
+      const { data: hiddenRows, error: hiddenError } = await supabase
+        .from('conversation_hidden')
+        .select('conversation_id')
+        .eq('user_id', userId);
+
+      if (!hiddenError) {
+        hiddenConversationIds = new Set((hiddenRows || []).map((r) => r.conversation_id));
+      } else if (hiddenError?.code !== 'PGRST205') {
+        throw hiddenError;
+      }
+
       const { data: conversations, error } = await supabase
         .from('conversations')
         .select('id, updated_at, is_group, group_name, group_image_url, participant1_id, participant2_id')
@@ -12,7 +24,7 @@ export const messagingService = {
 
       if (error) throw error;
 
-      const convs = conversations || [];
+      const convs = (conversations || []).filter((c) => !hiddenConversationIds.has(c.id));
       if (convs.length === 0) return [];
 
       const conversationIds = convs.map((c) => c.id);
@@ -75,14 +87,37 @@ export const messagingService = {
     }
   },
 
+  async hideConversation(conversationId, userId) {
+    try {
+      const { error } = await supabase
+        .from('conversation_hidden')
+        .upsert({ conversation_id: conversationId, user_id: userId }, { onConflict: 'conversation_id,user_id' });
+
+      if (error) {
+        if (error?.code === 'PGRST205') {
+          return { error: { message: "La table conversation_hidden n'existe pas encore. Exécute le script SQL de migration Supabase.", raw: error } };
+        }
+        throw error;
+      }
+      return { success: true };
+    } catch (error) {
+      console.error('Erreur hideConversation:', error);
+      return { error };
+    }
+  },
+
   // Créer ou récupérer une conversation privée entre deux utilisateurs
   async getOrCreatePrivateConversation(user1Id, user2Id) {
     try {
+      const a = user1Id < user2Id ? user1Id : user2Id;
+      const b = user1Id < user2Id ? user2Id : user1Id;
+
       // Vérifier si la conversation existe déjà
       const { data: existing, error: fetchError } = await supabase
         .from('conversations')
         .select('*')
-        .or(`(participant1_id.eq.${user1Id},participant2_id.eq.${user2Id}),(participant1_id.eq.${user2Id},participant2_id.eq.${user1Id})`)
+        .eq('participant1_id', a)
+        .eq('participant2_id', b)
         .eq('is_group', false)
         .single();
 
@@ -94,8 +129,8 @@ export const messagingService = {
       const { data, error } = await supabase
         .from('conversations')
         .insert({
-          participant1_id: user1Id,
-          participant2_id: user2Id,
+          participant1_id: a,
+          participant2_id: b,
           is_group: false
         })
         .select()

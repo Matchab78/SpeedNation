@@ -49,18 +49,31 @@ CREATE TABLE messages (
   reply_to_id UUID REFERENCES messages(id)
 );
 
+-- Table pour masquer une conversation (suppression "pour moi")
+CREATE TABLE conversation_hidden (
+  conversation_id UUID REFERENCES conversations(id) ON DELETE CASCADE,
+  user_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
+  hidden_at TIMESTAMPTZ DEFAULT NOW(),
+  PRIMARY KEY (conversation_id, user_id)
+);
+
 -- ÉTAPE 3: Créer les index pour optimiser les performances
 CREATE INDEX idx_conversations_participant1 ON conversations(participant1_id);
 CREATE INDEX idx_conversations_participant2 ON conversations(participant2_id);
 CREATE INDEX idx_conversations_updated_at ON conversations(updated_at DESC);
+CREATE UNIQUE INDEX conversations_private_pair_unique
+  ON conversations (LEAST(participant1_id, participant2_id), GREATEST(participant1_id, participant2_id))
+  WHERE is_group = FALSE;
 CREATE INDEX idx_messages_conversation_id ON messages(conversation_id);
 CREATE INDEX idx_messages_created_at ON messages(created_at DESC);
 CREATE INDEX idx_conversation_participants_user_id ON conversation_participants(user_id);
+CREATE INDEX idx_conversation_hidden_user_id ON conversation_hidden(user_id);
 
 -- ÉTAPE 4: Activer RLS (Row Level Security)
 ALTER TABLE conversations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE messages ENABLE ROW LEVEL SECURITY;
 ALTER TABLE conversation_participants ENABLE ROW LEVEL SECURITY;
+ALTER TABLE conversation_hidden ENABLE ROW LEVEL SECURITY;
 
 -- ÉTAPE 5: Créer les policies de sécurité
 
@@ -121,6 +134,16 @@ CREATE POLICY "Users can insert messages in their conversations" ON messages
 
 CREATE POLICY "Users can update their own messages" ON messages
   FOR UPDATE USING (sender_id = auth.uid());
+
+-- Policies pour conversation_hidden (suppression "pour moi")
+CREATE POLICY "Users can see their hidden conversations" ON conversation_hidden
+  FOR SELECT USING (user_id = auth.uid());
+
+CREATE POLICY "Users can hide conversations for themselves" ON conversation_hidden
+  FOR INSERT WITH CHECK (user_id = auth.uid());
+
+CREATE POLICY "Users can unhide their hidden conversations" ON conversation_hidden
+  FOR DELETE USING (user_id = auth.uid());
 
 -- ÉTAPE 6: Créer la fonction et le trigger pour updated_at
 CREATE OR REPLACE FUNCTION update_conversation_updated_at()
