@@ -60,6 +60,8 @@ CREATE TABLE IF NOT EXISTS events (
   event_time TIME,
   location TEXT NOT NULL,
   image_url TEXT,
+  is_featured BOOLEAN NOT NULL DEFAULT FALSE,
+  visibility TEXT NOT NULL DEFAULT 'private' CHECK (visibility IN ('private', 'public')),
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -67,6 +69,7 @@ CREATE TABLE IF NOT EXISTS events (
 -- Index pour améliorer les performances
 CREATE INDEX IF NOT EXISTS idx_events_creator_id ON events(creator_id);
 CREATE INDEX IF NOT EXISTS idx_events_event_date ON events(event_date);
+CREATE INDEX IF NOT EXISTS idx_events_is_featured ON events(is_featured);
 
 -- ============================================
 -- TABLE: event_participants (participants aux événements)
@@ -157,8 +160,18 @@ CREATE POLICY "Users can delete their own cars" ON cars
   FOR DELETE USING (auth.uid() = user_id);
 
 -- Politiques pour events
-CREATE POLICY "Anyone can view events" ON events
-  FOR SELECT USING (true);
+CREATE POLICY "Anyone can view public events" ON events
+  FOR SELECT USING (visibility = 'public');
+
+CREATE POLICY "Admins can view private events" ON events
+  FOR SELECT USING (
+    visibility = 'private' AND
+    EXISTS (
+      SELECT 1 FROM profiles 
+      WHERE profiles.id = auth.uid() 
+      AND profiles.role = 'admin'
+    )
+  );
 
 -- Seuls les administrateurs peuvent créer des événements
 CREATE POLICY "Only admins can create events" ON events

@@ -4,7 +4,7 @@ import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { Ionicons, FontAwesome5 } from "@expo/vector-icons";
 
 import StackNavigator from "./StackNavigator";
-import EventsScreen from "../screens/EventsScreen";
+import EventsStackNavigator from "./EventsStackNavigator";
 import CarsScreen from "../screens/CarsScreen";
 import SearchScreen from "../screens/SearchScreen";
 import ChatListScreen from "../screens/ChatListScreen";
@@ -83,7 +83,7 @@ export default function TabNavigator() {
       <Tab.Screen name="Home" component={StackNavigator} />
       <Tab.Screen name="Search" component={SearchScreen} />
       <Tab.Screen name="Messages" component={ChatListScreen} />
-      <Tab.Screen name="Events" component={EventsScreen} />
+      <Tab.Screen name="Events" component={EventsStackNavigator} />
       <Tab.Screen name="Cars" component={CarsScreen} />
     </Tab.Navigator>
   );
