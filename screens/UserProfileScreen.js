@@ -11,7 +11,9 @@ import {
   Alert,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { supabase } from "../supabase/supabase";
+import { supabase } from "../config/supabase";
+import { messagingService } from "../services/messagingService";
+import { useAuth } from "../utils/authContext";
 
 const { width } = Dimensions.get("window");
 const GRID_GAP = 2;
@@ -20,6 +22,7 @@ const ITEM_SIZE = Math.floor((width - GRID_GAP * (COLS - 1)) / COLS);
 
 export default function UserProfileScreen({ route, navigation }) {
   const { userId } = route.params;
+  const { user } = useAuth();
 
   const [profile, setProfile] = useState(null);
   const [cars, setCars] = useState([]);
@@ -173,6 +176,25 @@ export default function UserProfileScreen({ route, navigation }) {
     setFollowLoading(false);
   };
 
+  const handleMessage = async () => {
+    if (!user?.id || !profile?.id || profile.id === user.id) return;
+
+    const res = await messagingService.getOrCreatePrivateConversation(user.id, profile.id);
+    if (res?.error) {
+      console.error("Erreur getOrCreatePrivateConversation:", res.error);
+      return;
+    }
+
+    navigation.navigate("Chat", {
+      conversationId: res.conversation.id,
+      otherUser: {
+        id: profile.id,
+        full_name: profile.full_name,
+        avatar_url: profile.avatar_url,
+      },
+    });
+  };
+
   const renderPhoto = ({ item, index }) => {
     const marginRight = index % COLS !== COLS - 1 ? GRID_GAP : 0;
     const marginBottom = GRID_GAP;
@@ -252,6 +274,17 @@ export default function UserProfileScreen({ route, navigation }) {
               </Text>
             </TouchableOpacity>
           )}
+
+          {!isMe && !!user?.id && (
+            <TouchableOpacity
+              style={styles.messageBtn}
+              onPress={handleMessage}
+              activeOpacity={0.85}
+            >
+              <Ionicons name="chatbubble-ellipses" size={16} color="#fff" />
+              <Text style={styles.messageBtnText}>Message</Text>
+            </TouchableOpacity>
+          )}
         </View>
       </View>
 
@@ -317,6 +350,23 @@ const styles = StyleSheet.create({
   },
   followingBtn: { backgroundColor: "#222", borderWidth: 1, borderColor: "#333" },
   followText: { color: "#fff", fontWeight: "700" },
+
+  messageBtn: {
+    marginTop: 10,
+    flexDirection: "row",
+    gap: 8,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#1a1a1a",
+    borderWidth: 1,
+    borderColor: "#333",
+    paddingVertical: 10,
+    borderRadius: 14,
+  },
+  messageBtnText: {
+    color: "#fff",
+    fontWeight: "700",
+  },
 
   gridImage: { width: "100%", height: "100%", backgroundColor: "#111" },
 

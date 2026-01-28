@@ -10,9 +10,12 @@ import {
   TouchableOpacity,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { supabase } from "../supabase/supabase";
+import { supabase } from "../config/supabase";
+import { messagingService } from "../services/messagingService";
+import { useAuth } from "../utils/authContext";
 
 export default function SearchScreen({ navigation }) {
+  const { user } = useAuth();
   const [query, setQuery] = useState("");
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -51,6 +54,31 @@ export default function SearchScreen({ navigation }) {
     setLoading(false);
   };
 
+  const handleMessageUser = async (profile) => {
+    if (!user?.id) {
+      return;
+    }
+
+    if (!profile?.id || profile.id === user.id) {
+      return;
+    }
+
+    const res = await messagingService.getOrCreatePrivateConversation(user.id, profile.id);
+    if (res?.error) {
+      console.error("Erreur getOrCreatePrivateConversation:", res.error);
+      return;
+    }
+
+    navigation.navigate("Chat", {
+      conversationId: res.conversation.id,
+      otherUser: {
+        id: profile.id,
+        full_name: profile.full_name,
+        avatar_url: profile.avatar_url,
+      },
+    });
+  };
+
   return (
     <View style={styles.container}>
       <View style={styles.searchBar}>
@@ -72,23 +100,34 @@ export default function SearchScreen({ navigation }) {
         keyExtractor={(item) => item.id}
         style={{ marginTop: 16 }}
         renderItem={({ item }) => (
-          <TouchableOpacity
-            style={styles.row}
-            activeOpacity={0.8}
-            onPress={() =>
-              navigation.navigate("UserProfile", { userId: item.id })
-            }
-          >
-            <Image
-              style={styles.avatar}
-              source={{
-                uri:
-                  item.avatar_url ||
-                  `https://ui-avatars.com/api/?name=${encodeURIComponent(item.full_name || "User")}`,
-              }}
-            />
-            <Text style={styles.name}>{item.full_name || "Utilisateur"}</Text>
-          </TouchableOpacity>
+          <View style={styles.row}>
+            <TouchableOpacity
+              style={styles.rowLeft}
+              activeOpacity={0.8}
+              onPress={() => navigation.navigate("UserProfile", { userId: item.id })}
+            >
+              <Image
+                style={styles.avatar}
+                source={{
+                  uri:
+                    item.avatar_url ||
+                    `https://ui-avatars.com/api/?name=${encodeURIComponent(item.full_name || "User")}`,
+                }}
+              />
+              <Text style={styles.name}>{item.full_name || "Utilisateur"}</Text>
+            </TouchableOpacity>
+
+            {!!user?.id && user.id !== item.id && (
+              <TouchableOpacity
+                style={styles.messageBtn}
+                activeOpacity={0.85}
+                onPress={() => handleMessageUser(item)}
+              >
+                <Ionicons name="chatbubble-ellipses" size={16} color="#fff" />
+                <Text style={styles.messageBtnText}>Message</Text>
+              </TouchableOpacity>
+            )}
+          </View>
         )}
         ListEmptyComponent={
           !loading && query.trim().length >= 2 ? (
@@ -129,6 +168,11 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: "#222",
   },
+  rowLeft: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+  },
   avatar: {
     width: 42,
     height: 42,
@@ -138,6 +182,22 @@ const styles = StyleSheet.create({
   name: {
     color: "#fff",
     fontSize: 16,
+  },
+  messageBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: "#8916CB",
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#333",
+  },
+  messageBtnText: {
+    color: "#fff",
+    fontWeight: "700",
+    fontSize: 13,
   },
   empty: {
     color: "#777",

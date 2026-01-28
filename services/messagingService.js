@@ -141,10 +141,7 @@ export const messagingService = {
           content,
           message_type: messageType
         })
-        .select(`
-          *,
-          sender:sender_id(id, username, avatar_url)
-        `)
+        .select('*')
         .single();
 
       if (error) throw error;
