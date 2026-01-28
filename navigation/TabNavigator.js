@@ -19,28 +19,16 @@ export default function TabNavigator() {
         headerShown: false,
         tabBarStyle: {
           position: "absolute",
-<<<<<<< HEAD
           backgroundColor: "transparent",
-=======
-          backgroundColor: "#000000ff",
->>>>>>> 1217eaf1078644e0995c41c32229504e71e0dadf
           height: 80,
           left: 20,
           right: 20,
           bottom: 20,
           borderRadius: 25,
-<<<<<<< HEAD
           shadowColor: "transparent",
           shadowOpacity: 0,
           shadowRadius: 0,
           elevation: 0,
-=======
-          shadowColor: "#000",
-          shadowOpacity: 0.1,
-          shadowRadius: 10,
-          shadowOffset: { width: 0, height: 4 },
-          elevation: 6,
->>>>>>> 1217eaf1078644e0995c41c32229504e71e0dadf
           borderTopWidth: 0,
           paddingTop: 15,
           paddingBottom: 15,
@@ -100,7 +88,3 @@ export default function TabNavigator() {
     </Tab.Navigator>
   );
 }
-<<<<<<< HEAD
-
-=======
->>>>>>> 1217eaf1078644e0995c41c32229504e71e0dadf
