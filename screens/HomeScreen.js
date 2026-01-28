@@ -1,11 +1,17 @@
 import React, { useState } from "react";
 import { View, Text, StyleSheet, TouchableOpacity, Image, ScrollView, ImageBackground } from "react-native";
+<<<<<<< HEAD
 import { useAuth } from "../utils/authContext";
+=======
+>>>>>>> 1217eaf1078644e0995c41c32229504e71e0dadf
 
 export default function HomeScreen({ navigation }) {
   const [showEvents, setShowEvents] = useState(false);
   const [showCars, setShowCars] = useState(false);
+<<<<<<< HEAD
   const { user, profile } = useAuth();
+=======
+>>>>>>> 1217eaf1078644e0995c41c32229504e71e0dadf
 
   return (
     <ImageBackground
@@ -23,6 +29,7 @@ export default function HomeScreen({ navigation }) {
           resizeMode="contain"
         />
 
+<<<<<<< HEAD
         {user ? (
           <TouchableOpacity
             style={styles.profileButton}
@@ -43,6 +50,14 @@ export default function HomeScreen({ navigation }) {
             <Text style={styles.loginText}>Login</Text>
           </TouchableOpacity>
         )}
+=======
+        <TouchableOpacity
+          style={styles.loginButton}
+          onPress={() => navigation.navigate("Login")}
+        >
+          <Text style={styles.loginText}>Login</Text>
+        </TouchableOpacity>
+>>>>>>> 1217eaf1078644e0995c41c32229504e71e0dadf
       </View>
 
       {/* --- CONTENU --- */}
@@ -139,6 +154,7 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
 
+<<<<<<< HEAD
   profileButton: {
     backgroundColor: "#8916CB",
     paddingVertical: 8,
@@ -153,6 +169,8 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
 
+=======
+>>>>>>> 1217eaf1078644e0995c41c32229504e71e0dadf
   content: {
     paddingHorizontal: 16,
     paddingBottom: 40,
@@ -246,4 +264,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
 });
+<<<<<<< HEAD
 
+=======
+>>>>>>> 1217eaf1078644e0995c41c32229504e71e0dadf

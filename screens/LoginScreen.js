@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import React, { useState } from "react";
 import { 
   View, 
@@ -81,12 +82,19 @@ export default function LoginScreen({ navigation }) {
     }
   };
 
+=======
+import React from "react";
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, ImageBackground } from "react-native";
+
+export default function LoginScreen({ navigation }) {
+>>>>>>> 1217eaf1078644e0995c41c32229504e71e0dadf
   return (
     <ImageBackground
       source={require("../assets/logincar.jpeg")}
       style={styles.background}
       resizeMode="cover"
     >
+<<<<<<< HEAD
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={styles.overlay}
@@ -148,6 +156,39 @@ export default function LoginScreen({ navigation }) {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+=======
+      <View style={styles.overlay}>
+        <View style={styles.header}>
+          <Text style={styles.title}>SpeedNation</Text>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+            <Text style={styles.backText}>Retour</Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Connexion</Text>
+
+          <TextInput
+            placeholder="Email"
+            placeholderTextColor="#888"
+            keyboardType="email-address"
+            autoCapitalize="none"
+            style={styles.input}
+          />
+
+          <TextInput
+            placeholder="Mot de passe"
+            placeholderTextColor="#888"
+            secureTextEntry
+            style={styles.input}
+          />
+
+          <TouchableOpacity style={styles.loginButton}>
+            <Text style={styles.loginButtonText}>Se connecter</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+>>>>>>> 1217eaf1078644e0995c41c32229504e71e0dadf
     </ImageBackground>
   );
 }
@@ -159,12 +200,17 @@ const styles = StyleSheet.create({
   overlay: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.55)",
+<<<<<<< HEAD
   },
   scrollContent: {
     flexGrow: 1,
     paddingHorizontal: 24,
     paddingTop: 60,
     paddingBottom: 40,
+=======
+    paddingHorizontal: 24,
+    paddingTop: 60,
+>>>>>>> 1217eaf1078644e0995c41c32229504e71e0dadf
   },
   header: {
     flexDirection: "row",
@@ -218,13 +264,19 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginTop: 10,
   },
+<<<<<<< HEAD
   loginButtonDisabled: {
     opacity: 0.6,
   },
+=======
+>>>>>>> 1217eaf1078644e0995c41c32229504e71e0dadf
   loginButtonText: {
     color: "white",
     fontWeight: "600",
     fontSize: 16,
   },
 });
+<<<<<<< HEAD
 
+=======
+>>>>>>> 1217eaf1078644e0995c41c32229504e71e0dadf

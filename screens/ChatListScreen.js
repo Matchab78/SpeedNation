@@ -56,4 +56,7 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
 });
+<<<<<<< HEAD
 
+=======
+>>>>>>> 1217eaf1078644e0995c41c32229504e71e0dadf

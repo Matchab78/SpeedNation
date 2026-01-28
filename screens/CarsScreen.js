@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 import React, { useState, useEffect } from "react";
+=======
+import React, { useState } from "react";
+>>>>>>> 1217eaf1078644e0995c41c32229504e71e0dadf
 import {
   View,
   Text,
@@ -6,6 +10,7 @@ import {
   Image,
   TouchableOpacity,
   FlatList,
+<<<<<<< HEAD
   Alert,
   ActivityIndicator,
   Modal,
@@ -430,10 +435,45 @@ export default function CarsScreen({ navigation }) {
           <Text style={styles.placeholderText}>🚗</Text>
         </View>
       )}
+=======
+} from "react-native";
+
+export default function ProfileScreen() {
+  
+  // Onglet actif (Mes voitures / Mes favoris)
+  const [activeTab, setActiveTab] = useState("cars");
+
+  // Exemple de données voitures
+  const cars = [
+    {
+      id: "1",
+      name: "Porsche 911 GT3 • 2023",
+      price: "355 000€",
+      power: "329 Ch",
+      image: require("../assets/911GT3List.jpg"),
+      favorite: false,
+    },
+    {
+      id: "2",
+      name: "BMW M3 Compétition • 2023",
+      price: "158 170€",
+      power: "617 Ch",
+      image: require("../assets/M3GreyList.jpg"),
+      favorite: true,
+    },
+  ];
+
+  const renderCarCard = ({ item }) => (
+    <View style={styles.carCard}>
+
+      {/* Photo */}
+      <Image source={item.image} style={styles.carImage} resizeMode="contain" />
+>>>>>>> 1217eaf1078644e0995c41c32229504e71e0dadf
 
       {/* Infos */}
       <View style={styles.carInfoContainer}>
         <Text style={styles.carTitle}>{item.name}</Text>
+<<<<<<< HEAD
         <Text style={styles.carDetails}>
           {formatPrice(item.price_purchased)} • {item.power_hp} Ch
         </Text>
@@ -537,11 +577,47 @@ export default function CarsScreen({ navigation }) {
             {profile.followers_count.toLocaleString()} FOLLOWERS
           </Text>
         )}
+=======
+        <Text style={styles.carDetails}>{item.price} • {item.power}</Text>
+      </View>
+
+      {/* Bouton Like
+      <TouchableOpacity style={styles.likeButton}>
+        <Text style={{ fontSize: 22 }}>
+          {item.favorite ? "💙" : "🤍"}
+        </Text>
+      </TouchableOpacity> */}
+
+    </View>
+  );
+
+  return (
+    <View style={styles.container}>
+
+      {/* --- HEADER PROFIL --- */}
+      <View style={styles.profileCard}>
+        <Image
+          source={require("../assets/PP.webp")}
+          style={styles.avatar}
+        />
+
+        <View style={{ flex: 1 }}>
+          <Text style={styles.name}>Mathis CHABAULT</Text>
+          <Text style={styles.info}>étudiant</Text>
+          <Text style={styles.info}>Paris, France — 21 ans</Text>
+          <Text style={styles.followers}>2 M FOLLOWERS</Text>
+        </View>
+
+        <TouchableOpacity style={styles.menuButton}>
+          <Text style={styles.menuText}>☰</Text>
+        </TouchableOpacity>
+>>>>>>> 1217eaf1078644e0995c41c32229504e71e0dadf
       </View>
 
       {/* --- TABS --- */}
       <View style={styles.tabs}>
         <TouchableOpacity onPress={() => setActiveTab("cars")}>
+<<<<<<< HEAD
           <Text
             style={[
               styles.tabText,
@@ -1055,6 +1131,34 @@ export default function CarsScreen({ navigation }) {
           </TouchableOpacity>
         </KeyboardAvoidingView>
       </Modal>
+=======
+          <Text style={[
+            styles.tabText,
+            activeTab === "cars" && styles.activeTabText
+          ]}>
+            MES VOITURES
+          </Text>
+        </TouchableOpacity>
+
+        {/* <TouchableOpacity onPress={() => setActiveTab("fav")}>
+          <Text style={[
+            styles.tabText,
+            activeTab === "fav" && styles.activeTabText
+          ]}>
+            MES FAVORIS
+          </Text>
+        </TouchableOpacity> */}
+      </View>
+
+      {/* --- LISTE DES VOITURES --- */}
+      <FlatList
+        data={cars}
+        keyExtractor={(item) => item.id}
+        renderItem={renderCarCard}
+        contentContainerStyle={{ paddingBottom: 150 }}
+      />
+
+>>>>>>> 1217eaf1078644e0995c41c32229504e71e0dadf
     </View>
   );
 }
@@ -1066,6 +1170,7 @@ const styles = StyleSheet.create({
     paddingTop: 55,
   },
 
+<<<<<<< HEAD
   notLoggedIn: {
     flex: 1,
     justifyContent: "center",
@@ -1155,12 +1260,58 @@ const styles = StyleSheet.create({
   menuText: {
     fontSize: 24,
     color: "#fff",
+=======
+  /* --- Profil card --- */
+  profileCard: {
+    backgroundColor: "#111",
+    padding: 20,
+    borderRadius: 20,
+    marginHorizontal: 20,
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 25,
+  },
+
+  avatar: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    marginRight: 15,
+  },
+
+  name: {
+    color: "white",
+    fontSize: 22,
+    fontWeight: "bold",
+  },
+
+  info: {
+    color: "#ccc",
+    fontSize: 14,
+  },
+
+  followers: {
+    color: "#39B54A",
+    fontWeight: "bold",
+    marginTop: 4,
+  },
+
+  menuButton: {
+    marginLeft: 10,
+    padding: 10,
+  },
+
+  menuText: {
+    fontSize: 28,
+    color: "white",
+>>>>>>> 1217eaf1078644e0995c41c32229504e71e0dadf
   },
 
   /* --- Tabs --- */
   tabs: {
     flexDirection: "row",
     justifyContent: "space-evenly",
+<<<<<<< HEAD
     marginBottom: 16,
     paddingHorizontal: 20,
   },
@@ -1209,15 +1360,35 @@ const styles = StyleSheet.create({
 
   carsListContent: {
     paddingBottom: 140,
+=======
+    marginBottom: 15,
+  },
+
+  tabText: {
+    color: "#aaa",
+    fontSize: 16,
+  },
+
+  activeTabText: {
+    color: "white",
+    fontWeight: "bold",
+    textDecorationLine: "underline",
+>>>>>>> 1217eaf1078644e0995c41c32229504e71e0dadf
   },
 
   /* --- Car cards --- */
   carCard: {
     backgroundColor: "#111",
     marginHorizontal: 20,
+<<<<<<< HEAD
     borderRadius: 16,
     marginBottom: 14,
     padding: 16,
+=======
+    borderRadius: 20,
+    marginBottom: 20,
+    padding: 15,
+>>>>>>> 1217eaf1078644e0995c41c32229504e71e0dadf
     flexDirection: "row",
     alignItems: "center",
   },
@@ -1225,6 +1396,7 @@ const styles = StyleSheet.create({
   carImage: {
     width: 120,
     height: 80,
+<<<<<<< HEAD
     borderRadius: 12,
   },
 
@@ -1236,20 +1408,31 @@ const styles = StyleSheet.create({
 
   placeholderText: {
     fontSize: 36,
+=======
+>>>>>>> 1217eaf1078644e0995c41c32229504e71e0dadf
   },
 
   carInfoContainer: {
     flex: 1,
+<<<<<<< HEAD
     marginLeft: 14,
   },
 
   carTitle: {
     color: "#fff",
+=======
+    marginLeft: 10,
+  },
+
+  carTitle: {
+    color: "white",
+>>>>>>> 1217eaf1078644e0995c41c32229504e71e0dadf
     fontSize: 16,
     fontWeight: "bold",
   },
 
   carDetails: {
+<<<<<<< HEAD
     color: "#888",
     marginTop: 4,
     fontSize: 14,
@@ -1472,3 +1655,13 @@ const styles = StyleSheet.create({
   },
 });
 
+=======
+    color: "#ccc",
+    marginTop: 3,
+  },
+
+  likeButton: {
+    padding: 10,
+  },
+});
+>>>>>>> 1217eaf1078644e0995c41c32229504e71e0dadf
