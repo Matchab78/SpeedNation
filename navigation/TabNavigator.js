@@ -17,6 +17,7 @@ export default function TabNavigator() {
       initialRouteName="Home"
       screenOptions={({ route }) => ({
         headerShown: false,
+        tabBarShowLabel: false,
         tabBarStyle: {
           position: "absolute",
           backgroundColor: "transparent",
@@ -37,7 +38,6 @@ export default function TabNavigator() {
           justifyContent: "center",
           alignItems: "center",
         },
-        tabBarShowLabel: false,
         tabBarIcon: ({ focused }) => {
           let IconComponent = Ionicons;
           let iconName = "";

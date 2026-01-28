@@ -11,7 +11,8 @@ export const eventService = {
     try {
       const { data, error } = await supabase
         .from('events')
-        .select('*, profiles(full_name, avatar_url)')
+        .select('*')
+        .order('is_featured', { ascending: false })
         .order('event_date', { ascending: true });
 
       if (error) throw error;
@@ -28,7 +29,7 @@ export const eventService = {
     try {
       const { data, error } = await supabase
         .from('events')
-        .select('*, profiles(full_name, avatar_url), event_participants(count)')
+        .select('*')
         .eq('id', eventId)
         .single();
 
@@ -74,6 +75,7 @@ export const eventService = {
           event_time: eventData.event_time || null,
           location: eventData.location,
           image_url: eventData.image_url || null,
+          visibility: eventData.visibility || 'private',
         })
         .select()
         .single();
@@ -198,6 +200,34 @@ export const eventService = {
       return { data, error: null };
     } catch (error) {
       return { data: null, error };
+    }
+  },
+
+  /**
+   * Définir un événement comme mis en avant (unique)
+   */
+  async setFeaturedEvent(eventId) {
+    try {
+      const { error } = await supabase.rpc('set_featured_event', {
+        p_event_id: eventId,
+      });
+      if (error) throw error;
+      return { error: null };
+    } catch (error) {
+      return { error };
+    }
+  },
+
+  /**
+   * Enlever toute mise en avant
+   */
+  async clearFeaturedEvent() {
+    try {
+      const { error } = await supabase.rpc('clear_featured_event');
+      if (error) throw error;
+      return { error: null };
+    } catch (error) {
+      return { error };
     }
   },
 };
