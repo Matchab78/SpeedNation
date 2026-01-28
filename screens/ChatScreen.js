@@ -27,6 +27,13 @@ export default function ChatScreen({ route, navigation }) {
   const flatListRef = useRef(null);
 
   useEffect(() => {
+    // Masquer le header de navigation pour utiliser notre header personnalisé
+    navigation.setOptions({
+      headerShown: false,
+    });
+  }, [navigation]);
+
+  useEffect(() => {
     if (!conversationId || !user) return;
 
     loadMessages();
@@ -50,13 +57,6 @@ export default function ChatScreen({ route, navigation }) {
       subscription?.unsubscribe();
     };
   }, [conversationId, user]);
-
-  useEffect(() => {
-    // Mettre à jour le titre de l'écran avec le nom de l'autre utilisateur
-    if (otherUser?.full_name) {
-      navigation.setOptions({ title: otherUser.full_name });
-    }
-  }, [otherUser, navigation]);
 
   const loadMessages = async () => {
     try {
@@ -185,47 +185,85 @@ export default function ChatScreen({ route, navigation }) {
   }
 
   return (
-    <KeyboardAvoidingView 
-      style={styles.container}
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-    >
-      <FlatList
-        ref={flatListRef}
-        data={messages}
-        renderItem={renderMessage}
-        keyExtractor={(item) => item.id}
-        style={styles.messagesList}
-        contentContainerStyle={styles.messagesContainer}
-        showsVerticalScrollIndicator={false}
-      />
-      
-      <View style={styles.inputContainer}>
-        <TextInput
-          style={styles.textInput}
-          value={newMessage}
-          onChangeText={setNewMessage}
-          placeholder="Écris un message..."
-          placeholderTextColor="#666"
-          multiline
-          maxLength={1000}
-        />
-        
+    <View style={styles.container}>
+      {/* Header avec avatar et nom */}
+      <View style={styles.chatHeader}>
         <TouchableOpacity
-          style={[
-            styles.sendButton,
-            (!newMessage.trim() || sending) && styles.sendButtonDisabled
-          ]}
-          onPress={sendMessage}
-          disabled={!newMessage.trim() || sending}
+          onPress={() => navigation.goBack()}
+          style={styles.backBtn}
         >
-          {sending ? (
-            <ActivityIndicator size="small" color="#fff" />
-          ) : (
-            <Ionicons name="send" size={20} color="#fff" />
-          )}
+          <Ionicons name="arrow-back" size={24} color="#fff" />
         </TouchableOpacity>
+
+        <View style={styles.headerCenter}>
+          <TouchableOpacity
+            onPress={() =>
+              otherUser?.id && navigation.navigate("UserProfile", { userId: otherUser.id })
+            }
+            style={styles.headerProfileTouchable}
+          >
+            {otherUser?.avatar_url ? (
+              <Image
+                source={{ uri: otherUser.avatar_url }}
+                style={styles.headerAvatar}
+              />
+            ) : (
+              <View style={[styles.headerAvatar, { backgroundColor: "#2a2a2a", justifyContent: "center", alignItems: "center" }]}>
+                <Ionicons name="person" size={18} color="#666" />
+              </View>
+            )}
+            <Text style={styles.headerName}>
+              {otherUser?.full_name || "Utilisateur"}
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.headerRight} />
       </View>
-    </KeyboardAvoidingView>
+
+      <KeyboardAvoidingView
+        style={styles.chatContainer}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
+      >
+        <FlatList
+          ref={flatListRef}
+          data={messages}
+          renderItem={renderMessage}
+          keyExtractor={(item) => item.id}
+          style={styles.messagesList}
+          contentContainerStyle={styles.messagesContainer}
+          showsVerticalScrollIndicator={false}
+        />
+
+        <View style={styles.inputContainer}>
+          <TextInput
+            style={styles.textInput}
+            value={newMessage}
+            onChangeText={setNewMessage}
+            placeholder="Écris un message..."
+            placeholderTextColor="#666"
+            multiline
+            maxLength={1000}
+          />
+
+          <TouchableOpacity
+            style={[
+              styles.sendButton,
+              (!newMessage.trim() || sending) && styles.sendButtonDisabled
+            ]}
+            onPress={sendMessage}
+            disabled={!newMessage.trim() || sending}
+          >
+            {sending ? (
+              <ActivityIndicator size="small" color="#fff" />
+            ) : (
+              <Ionicons name="send" size={20} color="#fff" />
+            )}
+          </TouchableOpacity>
+        </View>
+      </KeyboardAvoidingView>
+    </View>
   );
 }
 
@@ -233,6 +271,46 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#000",
+  },
+  chatContainer: {
+    flex: 1,
+  },
+  chatHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    paddingTop: 50,
+    paddingBottom: 12,
+    backgroundColor: "#000",
+    borderBottomWidth: 1,
+    borderBottomColor: "#1a1a1a",
+  },
+  backBtn: {
+    marginRight: 12,
+  },
+  headerCenter: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  headerProfileTouchable: {
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  headerRight: {
+    width: 40, // Équilibre avec le bouton retour à gauche
+  },
+  headerAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    marginBottom: 4,
+  },
+  headerName: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "600",
+    textAlign: "center",
   },
   loadingContainer: {
     flex: 1,
@@ -306,10 +384,11 @@ const styles = StyleSheet.create({
   inputContainer: {
     flexDirection: "row",
     alignItems: "flex-end",
-    padding: 16,
+    padding: 12,
     backgroundColor: "#0a0a0a",
     borderTopWidth: 1,
     borderTopColor: "#1a1a1a",
+    paddingBottom: Platform.OS === "ios" ? 8 : 12,
   },
   textInput: {
     flex: 1,
