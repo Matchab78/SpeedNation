@@ -18,6 +18,7 @@ export default function LoginScreen({ navigation }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [isSignUpMode, setIsSignUpMode] = useState(false);
 
   const handleLogin = async () => {
     // Validation
@@ -81,6 +82,99 @@ export default function LoginScreen({ navigation }) {
     }
   };
 
+  const handleSignUp = async () => {
+    // Validation
+    if (!email.trim()) {
+      Alert.alert("Erreur", "Veuillez entrer votre email");
+      return;
+    }
+
+    if (!password.trim()) {
+      Alert.alert("Erreur", "Veuillez entrer un mot de passe");
+      return;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      Alert.alert("Erreur", "Veuillez entrer un email valide");
+      return;
+    }
+
+    if (password.length < 6) {
+      Alert.alert("Erreur", "Le mot de passe doit contenir au moins 6 caractères");
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const { data, error } = await authService.signUp(email.trim(), password, {});
+
+      if (error) {
+        let errorMessage = error.message || "Une erreur est survenue lors de la création du compte";
+        Alert.alert("Erreur", errorMessage);
+        setLoading(false);
+        return;
+      }
+
+      if (data?.user) {
+        Alert.alert(
+          "Compte créé",
+          "Ton compte a été créé. Vérifie ta boîte mail pour confirmer ton adresse avant de te connecter.",
+          [
+            {
+              text: "OK",
+              onPress: () => {
+                setIsSignUpMode(false);
+              },
+            },
+          ]
+        );
+      }
+    } catch (error) {
+      Alert.alert("Erreur", "Une erreur inattendue est survenue");
+      console.error("Erreur d'inscription:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleForgotPassword = async () => {
+    if (!email.trim()) {
+      Alert.alert(
+        "Email requis",
+        "Renseigne ton email dans le champ prévu puis clique de nouveau sur \"Mot de passe oublié ?\"."
+      );
+      return;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      Alert.alert("Erreur", "Veuillez entrer un email valide");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const { error } = await authService.resetPassword(email.trim());
+      if (error) {
+        let message = error.message || "Impossible d'envoyer l'email de réinitialisation";
+        Alert.alert("Erreur", message);
+        return;
+      }
+
+      Alert.alert(
+        "Email envoyé",
+        "Si un compte existe avec cet email, un lien de réinitialisation de mot de passe a été envoyé."
+      );
+    } catch (error) {
+      Alert.alert("Erreur", "Une erreur inattendue est survenue");
+      console.error("Erreur de réinitialisation de mot de passe:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <ImageBackground
       source={require("../assets/logincar.jpeg")}
@@ -105,7 +199,9 @@ export default function LoginScreen({ navigation }) {
           </View>
 
           <View style={styles.card}>
-            <Text style={styles.cardTitle}>Connexion</Text>
+            <Text style={styles.cardTitle}>
+              {isSignUpMode ? "Créer un compte" : "Connexion"}
+            </Text>
 
             <TextInput
               placeholder="Email"
@@ -129,22 +225,50 @@ export default function LoginScreen({ navigation }) {
               value={password}
               onChangeText={setPassword}
               editable={!loading}
-              onSubmitEditing={handleLogin}
+              onSubmitEditing={isSignUpMode ? handleSignUp : handleLogin}
               returnKeyType="done"
               style={styles.input}
             />
 
             <TouchableOpacity 
               style={[styles.loginButton, loading && styles.loginButtonDisabled]}
-              onPress={handleLogin}
+              onPress={isSignUpMode ? handleSignUp : handleLogin}
               disabled={loading}
             >
               {loading ? (
                 <ActivityIndicator color="white" />
               ) : (
-                <Text style={styles.loginButtonText}>Se connecter</Text>
+                <Text style={styles.loginButtonText}>
+                  {isSignUpMode ? "Créer un compte" : "Se connecter"}
+                </Text>
               )}
             </TouchableOpacity>
+
+            {!isSignUpMode && (
+              <TouchableOpacity
+                onPress={handleForgotPassword}
+                disabled={loading}
+                style={styles.forgotPasswordButton}
+              >
+                <Text style={styles.forgotPasswordText}>Mot de passe oublié ?</Text>
+              </TouchableOpacity>
+            )}
+
+            <View style={styles.switchAuthRow}>
+              <Text style={styles.switchAuthText}>
+                {isSignUpMode
+                  ? "Vous avez déjà un compte ?"
+                  : "Pas encore de compte ?"}
+              </Text>
+              <TouchableOpacity
+                onPress={() => setIsSignUpMode((prev) => !prev)}
+                disabled={loading}
+              >
+                <Text style={styles.switchAuthLink}>
+                  {isSignUpMode ? "Se connecter" : "Créer un compte"}
+                </Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -225,5 +349,31 @@ const styles = StyleSheet.create({
     color: "white",
     fontWeight: "600",
     fontSize: 16,
+  },
+  forgotPasswordButton: {
+    marginTop: 14,
+    alignItems: "center",
+  },
+  forgotPasswordText: {
+    color: "#cccccc",
+    fontSize: 14,
+    textDecorationLine: "underline",
+  },
+  switchAuthRow: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    marginTop: 18,
+  },
+  switchAuthText: {
+    color: "#cccccc",
+    fontSize: 14,
+    marginRight: 6,
+  },
+  switchAuthLink: {
+    color: "#ffffff",
+    fontSize: 14,
+    fontWeight: "600",
+    textDecorationLine: "underline",
   },
 });

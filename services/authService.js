@@ -201,5 +201,18 @@ export const authService = {
       return { role: null, error };
     }
   },
+
+  /**
+   * Demander une réinitialisation de mot de passe
+   */
+  async resetPassword(email) {
+    try {
+      const { data, error } = await supabase.auth.resetPasswordForEmail(email);
+      if (error) throw error;
+      return { data, error: null };
+    } catch (error) {
+      return { data: null, error };
+    }
+  },
 };
 
