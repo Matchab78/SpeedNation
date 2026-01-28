@@ -20,9 +20,16 @@ export default function ChatScreen({ route, navigation }) {
   const { user } = useAuth();
   const { conversationId, otherUser } = route.params || {};
   const userId = user?.id;
+
+  const [messages, setMessages] = useState([]);
+  const [newMessage, setNewMessage] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [sending, setSending] = useState(false);
   
-  // Protection : afficher un message si non connecté
-  if (!user) {
+  const flatListRef = useRef(null);
+
+  // Protection : afficher un message si non connecté (après les hooks)
+  if (!userId) {
     return (
       <View style={styles.container}>
         <View style={styles.errorContainer}>
@@ -35,13 +42,6 @@ export default function ChatScreen({ route, navigation }) {
       </View>
     );
   }
-  
-  const [messages, setMessages] = useState([]);
-  const [newMessage, setNewMessage] = useState("");
-  const [loading, setLoading] = useState(true);
-  const [sending, setSending] = useState(false);
-  
-  const flatListRef = useRef(null);
 
   useEffect(() => {
     if (!conversationId || !userId) return;

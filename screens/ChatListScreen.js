@@ -23,22 +23,9 @@ export default function ChatListScreen({ navigation }) {
 
   const openRowRef = useRef(null);
 
-  // Protection : afficher un message si non connecté
-  if (!user) {
-    return (
-      <View style={styles.container}>
-        <View style={styles.errorContainer}>
-          <Ionicons name="lock-closed" size={60} color="#666" />
-          <Text style={styles.errorTitle}>Connexion requise</Text>
-          <Text style={styles.errorSubText}>
-            Connecte-toi pour accéder à tes messages
-          </Text>
-        </View>
-      </View>
-    );
-  }
-
   useEffect(() => {
+    if (!userId) return;
+
     loadConversations();
     
     // S'abonner aux nouvelles conversations/messages
@@ -76,6 +63,21 @@ export default function ChatListScreen({ navigation }) {
       setLoading(false);
     }
   };
+
+  // Protection : afficher un message si non connecté (après les hooks)
+  if (!userId) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.errorContainer}>
+          <Ionicons name="lock-closed" size={60} color="#666" />
+          <Text style={styles.errorTitle}>Connexion requise</Text>
+          <Text style={styles.errorSubText}>
+            Connecte-toi pour accéder à tes messages
+          </Text>
+        </View>
+      </View>
+    );
+  }
 
   const openConversation = (conversation) => {
     navigation.navigate('Chat', { 
