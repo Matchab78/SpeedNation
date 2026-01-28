@@ -29,7 +29,7 @@ export const carService = {
     try {
       const { data, error } = await supabase
         .from('cars')
-        .select('*, profiles(full_name, avatar_url)')
+        .select('*')
         .eq('id', carId)
         .single();
 

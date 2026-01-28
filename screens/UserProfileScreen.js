@@ -200,9 +200,13 @@ export default function UserProfileScreen({ route, navigation }) {
     const marginBottom = GRID_GAP;
 
     return (
-      <View style={{ width: ITEM_SIZE, height: ITEM_SIZE, marginRight, marginBottom }}>
+      <TouchableOpacity
+        style={{ width: ITEM_SIZE, height: ITEM_SIZE, marginRight, marginBottom }}
+        activeOpacity={0.85}
+        onPress={() => navigation.navigate("CarDetail", { carId: item.id, imageUrl: item.image_url })}
+      >
         <Image source={{ uri: item.image_url }} style={styles.gridImage} resizeMode="cover" />
-      </View>
+      </TouchableOpacity>
     );
   };
 

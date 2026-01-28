@@ -6,6 +6,7 @@ import UserProfileScreen from "../screens/UserProfileScreen";
 import EventFormScreen from "../screens/EventFormScreen"; // ✅ AJOUT
 import ChatScreen from "../screens/ChatScreen"; // ✅ AJOUT MESSAGERIE
 import LoginScreen from "../screens/LoginScreen"; // ✅ AJOUT LOGIN
+import CarDetailScreen from "../screens/CarDetailScreen";
 
 const Stack = createNativeStackNavigator();
 
@@ -32,6 +33,8 @@ export default function StackNavigator() {
 
       {/* Formulaire Event (create/edit) */}
       <Stack.Screen name="EventForm" component={EventFormScreen} />
+
+      <Stack.Screen name="CarDetail" component={CarDetailScreen} />
 
       {/* Conversation de messagerie */}
       <Stack.Screen 
