@@ -3,7 +3,7 @@ import { View } from "react-native";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { Ionicons, FontAwesome5 } from "@expo/vector-icons";
 
-import StackNavigator from "./StackNavigator";
+import HomeScreen from "../screens/HomeScreen";
 import EventsScreen from "../screens/EventsScreen";
 import CarsScreen from "../screens/CarsScreen";
 import SearchScreen from "../screens/SearchScreen";
@@ -38,7 +38,6 @@ export default function TabNavigator() {
           alignItems: "center",
         },
         tabBarShowLabel: false,
-
         tabBarIcon: ({ focused }) => {
           let IconComponent = Ionicons;
           let iconName = "";
@@ -64,12 +63,7 @@ export default function TabNavigator() {
           }
 
           return (
-            <View
-              style={{
-                justifyContent: "center",
-                alignItems: "center",
-              }}
-            >
+            <View style={{ justifyContent: "center", alignItems: "center" }}>
               <IconComponent
                 name={iconName}
                 size={26}
@@ -80,7 +74,7 @@ export default function TabNavigator() {
         },
       })}
     >
-      <Tab.Screen name="Home" component={StackNavigator} />
+      <Tab.Screen name="Home" component={HomeScreen} />
       <Tab.Screen name="Search" component={SearchScreen} />
       <Tab.Screen name="Messages" component={ChatListScreen} />
       <Tab.Screen name="Events" component={EventsScreen} />

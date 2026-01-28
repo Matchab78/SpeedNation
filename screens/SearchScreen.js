@@ -1,27 +1,101 @@
-import React, { useState } from "react";
-import { View, TextInput, StyleSheet } from "react-native";
+import React, { useEffect, useState } from "react";
+import {
+  View,
+  TextInput,
+  StyleSheet,
+  FlatList,
+  Text,
+  Image,
+  ActivityIndicator,
+  TouchableOpacity,
+} from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { supabase } from "../supabase/supabase";
 
-export default function SearchScreen() {
+export default function SearchScreen({ navigation }) {
   const [query, setQuery] = useState("");
+  const [results, setResults] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (query.trim().length < 2) {
+      setResults([]);
+      setLoading(false);
+      return;
+    }
+
+    const t = setTimeout(() => {
+      searchProfiles();
+    }, 300);
+
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [query]);
+
+  const searchProfiles = async () => {
+    setLoading(true);
+
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("id, full_name, avatar_url")
+      .ilike("full_name", `%${query}%`)
+      .limit(20);
+
+    if (!error) {
+      setResults(data || []);
+    } else {
+      setResults([]);
+      console.log("Supabase error:", error);
+    }
+
+    setLoading(false);
+  };
 
   return (
     <View style={styles.container}>
-      
-      {/* --- BARRE DE RECHERCHE --- */}
       <View style={styles.searchBar}>
         <Ionicons name="search" size={22} color="#8e8e8e" style={{ marginRight: 8 }} />
-        
         <TextInput
           style={styles.input}
           placeholder="Rechercher une personne..."
           placeholderTextColor="#8e8e8e"
           value={query}
           onChangeText={setQuery}
+          autoCapitalize="none"
         />
       </View>
 
-      {/* Tu pourras afficher les résultats ici plus tard */}
+      {loading && <ActivityIndicator style={{ marginTop: 16 }} />}
+
+      <FlatList
+        data={results}
+        keyExtractor={(item) => item.id}
+        style={{ marginTop: 16 }}
+        renderItem={({ item }) => (
+          <TouchableOpacity
+            style={styles.row}
+            activeOpacity={0.8}
+            onPress={() =>
+              navigation.navigate("UserProfile", { userId: item.id })
+            }
+          >
+            <Image
+              style={styles.avatar}
+              source={{
+                uri:
+                  item.avatar_url ||
+                  `https://ui-avatars.com/api/?name=${encodeURIComponent(item.full_name || "User")}`,
+              }}
+            />
+            <Text style={styles.name}>{item.full_name || "Utilisateur"}</Text>
+          </TouchableOpacity>
+        )}
+        ListEmptyComponent={
+          !loading && query.trim().length >= 2 ? (
+            <Text style={styles.empty}>Aucun résultat</Text>
+          ) : null
+        }
+      />
     </View>
   );
 }
@@ -33,7 +107,6 @@ const styles = StyleSheet.create({
     paddingTop: 70,
     paddingHorizontal: 20,
   },
-
   searchBar: {
     flexDirection: "row",
     alignItems: "center",
@@ -44,10 +117,31 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#333",
   },
-
   input: {
     flex: 1,
     color: "#fff",
     fontSize: 16,
+  },
+  row: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: "#222",
+  },
+  avatar: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    marginRight: 12,
+  },
+  name: {
+    color: "#fff",
+    fontSize: 16,
+  },
+  empty: {
+    color: "#777",
+    textAlign: "center",
+    marginTop: 24,
   },
 });
