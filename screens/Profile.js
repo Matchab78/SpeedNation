@@ -706,7 +706,17 @@ export default function Profile({ navigation }) {
             <TouchableOpacity activeOpacity={1} onPress={(e) => e.stopPropagation()}>
               <View style={styles.modalContent}>
                 <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" contentContainerStyle={styles.modalScrollContent}>
-                  <Text style={styles.modalTitle}>Modifier mon profil</Text>
+                  <View style={styles.modalHeader}>
+                    <Text style={styles.modalTitle}>Modifier mon profil</Text>
+                    <TouchableOpacity
+                      style={styles.modalClose}
+                      onPress={() => setShowEditProfileModal(false)}
+                      accessibilityRole="button"
+                      accessibilityLabel="Fermer"
+                    >
+                      <Text style={styles.modalCloseText}>✕</Text>
+                    </TouchableOpacity>
+                  </View>
 
                   <TouchableOpacity style={styles.avatarPickerButton} onPress={handleSelectAvatar}>
                     {editProfile.avatarUri ? (
@@ -742,11 +752,11 @@ export default function Profile({ navigation }) {
 
                   {isAdmin && (
                     <View style={{
-                      backgroundColor: '#111',
+                      backgroundColor: '#0a0a0a',
                       borderRadius: 12,
                       padding: 14,
                       borderWidth: 1,
-                      borderColor: '#1f2937',
+                      borderColor: '#1a1a1a',
                       marginBottom: 14,
                     }}>
                       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -757,12 +767,6 @@ export default function Profile({ navigation }) {
                         />
                       </View>
 
-                      <TouchableOpacity
-                        style={[styles.modalButton, { marginTop: 12, backgroundColor: '#1a0a2e', borderWidth: 1, borderColor: '#2a1a3a' }]}
-                        onPress={() => navigation.navigate('AdminPanel')}
-                      >
-                        <Text style={{ color: '#a0a0a0', fontWeight: '600' }}>Ouvrir le panel administrateur</Text>
-                      </TouchableOpacity>
                     </View>
                   )}
 
@@ -834,19 +838,114 @@ const styles = StyleSheet.create({
   emptyStateText: { color: "#fff", fontSize: 18, fontWeight: "600", marginBottom: 10 },
   emptyStateSubtext: { color: "#888", fontSize: 14, textAlign: "center" },
   modalOverlay: { flex: 1, backgroundColor: "rgba(0, 0, 0, 0.85)", justifyContent: "flex-end" },
-  modalContent: { backgroundColor: "#0f0f0f", borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight: "90%", borderTopWidth: 3, borderTopColor: "#8916CB" },
-  modalScrollContent: { padding: 24 },
-  modalTitle: { color: "#fff", fontSize: 22, fontWeight: "bold", marginBottom: 20 },
-  modalInput: { backgroundColor: "#1a0a2e", borderRadius: 14, paddingHorizontal: 16, paddingVertical: 14, color: "#fff", marginBottom: 14, borderWidth: 1, borderColor: "#2a1a3a" },
-  modalButtons: { flexDirection: "row", justifyContent: "space-between", marginTop: 20 },
-  modalButton: { flex: 1, paddingVertical: 12, borderRadius: 20, alignItems: "center", marginHorizontal: 5 },
-  cancelButton: { backgroundColor: "#1a0a2e", borderWidth: 1, borderColor: "#2a1a3a" },
-  cancelButtonText: { color: "#a0a0a0", fontWeight: "600" },
-  addButtonModal: { backgroundColor: "#8916CB", borderWidth: 1, borderColor: "rgba(137, 22, 203, 0.5)" },
-  addButtonModalText: { color: "#fff", fontWeight: "600" },
+  modalContent: {
+    backgroundColor: "#050505",
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    maxHeight: "90%",
+    borderTopWidth: 1,
+    borderTopColor: "#1a1a1a",
+    shadowColor: "#000",
+    shadowOpacity: 0.4,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: -4 },
+  },
+  modalScrollContent: {
+    padding: 24,
+  },
+  modalHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 16,
+  },
+  modalTitle: {
+    color: "#fff",
+    fontSize: 22,
+    fontWeight: "bold",
+    marginBottom: 0,
+  },
+  modalClose: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#0a0a0a",
+    borderWidth: 1,
+    borderColor: "#1a1a1a",
+  },
+  modalCloseText: {
+    color: "#666",
+    fontSize: 16,
+    fontWeight: "600",
+  },
+  modalInput: {
+    backgroundColor: "#0a0a0a",
+    borderRadius: 16,
+    paddingHorizontal: 18,
+    paddingVertical: 16,
+    color: "#fff",
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: "#1a1a1a",
+    fontSize: 16,
+  },
+  modalButtons: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginTop: 24,
+    gap: 12,
+  },
+
+  modalButton: {
+    flex: 1,
+    paddingVertical: 16,
+    borderRadius: 24,
+    alignItems: "center",
+    marginHorizontal: 0,
+    shadowColor: "#000",
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 3,
+  },
+
+  cancelButton: {
+    backgroundColor: "#0a0a0a",
+    borderWidth: 1,
+    borderColor: "#1a1a1a",
+  },
+
+  cancelButtonText: {
+    color: "#666",
+    fontWeight: "600",
+    fontSize: 16,
+  },
+
+  addButtonModal: {
+    backgroundColor: "#0a0a0a",
+    borderWidth: 1,
+    borderColor: "#2a1a3a",
+  },
+
+  addButtonModalText: {
+    color: "#b8a3ff",
+    fontWeight: "600",
+    fontSize: 16,
+  },
   imagePickerButton: { marginBottom: 12, borderRadius: 12, overflow: "hidden" },
   previewImage: { width: "100%", height: 200, borderRadius: 12 },
-  imagePickerPlaceholder: { backgroundColor: "#1a0a2e", borderRadius: 12, padding: 40, alignItems: "center", justifyContent: "center", borderWidth: 2, borderColor: "#2a1a3a", borderStyle: "dashed" },
+  imagePickerPlaceholder: {
+    backgroundColor: "#0a0a0a",
+    borderRadius: 12,
+    padding: 40,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 2,
+    borderColor: "#1a1a1a",
+    borderStyle: "dashed",
+  },
   imagePickerText: { fontSize: 40, marginBottom: 10 },
   imagePickerLabel: { color: "#888", fontSize: 14 },
   removeImageButton: { backgroundColor: "#ff4444", paddingVertical: 8, borderRadius: 8, alignItems: "center", marginBottom: 12 },
