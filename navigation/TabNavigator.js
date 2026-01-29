@@ -5,7 +5,7 @@ import { Ionicons, FontAwesome5 } from "@expo/vector-icons";
 
 import HomeScreen from "../screens/HomeScreen";
 import EventsScreen from "../screens/EventsScreen";
-import CarsScreen from "../screens/CarsScreen";
+import Profile from "../screens/Profile";
 import SearchScreen from "../screens/SearchScreen";
 import ChatListScreen from "../screens/ChatListScreen";
 
@@ -78,7 +78,7 @@ export default function TabNavigator() {
       <Tab.Screen name="Search" component={SearchScreen} />
       <Tab.Screen name="Messages" component={ChatListScreen} />
       <Tab.Screen name="Events" component={EventsScreen} />
-      <Tab.Screen name="Cars" component={CarsScreen} />
+      <Tab.Screen name="Cars" component={Profile} />
     </Tab.Navigator>
   );
 }

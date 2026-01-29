@@ -7,6 +7,7 @@ import EventFormScreen from "../screens/EventFormScreen"; // ✅ AJOUT
 import ChatScreen from "../screens/ChatScreen"; // ✅ AJOUT MESSAGERIE
 import LoginScreen from "../screens/LoginScreen"; // ✅ AJOUT LOGIN
 import CarDetailScreen from "../screens/CarDetailScreen";
+import AdminPanelScreen from "../screens/AdminPanelScreen";
 
 const Stack = createNativeStackNavigator();
 
@@ -35,6 +36,9 @@ export default function StackNavigator() {
       <Stack.Screen name="EventForm" component={EventFormScreen} />
 
       <Stack.Screen name="CarDetail" component={CarDetailScreen} />
+
+      {/* Panel administrateur */}
+      <Stack.Screen name="AdminPanel" component={AdminPanelScreen} />
 
       {/* Conversation de messagerie */}
       <Stack.Screen 
