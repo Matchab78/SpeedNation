@@ -20,25 +20,10 @@ export default function ChatListScreen({ navigation }) {
   const userId = user?.id;
   const [conversations, setConversations] = useState([]);
   const [loading, setLoading] = useState(true);
-
   const openRowRef = useRef(null);
 
-  // Protection : afficher un message si non connecté
-  if (!user) {
-    return (
-      <View style={styles.container}>
-        <View style={styles.errorContainer}>
-          <Ionicons name="lock-closed" size={60} color="#666" />
-          <Text style={styles.errorTitle}>Connexion requise</Text>
-          <Text style={styles.errorSubText}>
-            Connecte-toi pour accéder à tes messages
-          </Text>
-        </View>
-      </View>
-    );
-  }
-
   useEffect(() => {
+    if (!user) return;
     loadConversations();
     
     // S'abonner aux nouvelles conversations/messages
@@ -61,6 +46,21 @@ export default function ChatListScreen({ navigation }) {
 
     return () => clearInterval(intervalId);
   }, [userId]);
+
+  // Protection : afficher un message si non connecté
+  if (!user) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.errorContainer}>
+          <Ionicons name="lock-closed" size={60} color="#666" />
+          <Text style={styles.errorTitle}>Connexion requise</Text>
+          <Text style={styles.errorSubText}>
+            Connecte-toi pour accéder à tes messages
+          </Text>
+        </View>
+      </View>
+    );
+  }
 
   const loadConversations = async () => {
     try {

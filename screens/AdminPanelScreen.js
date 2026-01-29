@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, StyleSheet, ActivityIndicator, ScrollView } from "react-native";
+import { View, Text, StyleSheet, ActivityIndicator, ScrollView, TouchableOpacity } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { supabase } from "../config/supabase";
 
-export default function AdminPanelScreen() {
+export default function AdminPanelScreen({ navigation }) {
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({
     users: 0,
@@ -39,10 +40,18 @@ export default function AdminPanelScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>Panel administrateur</Text>
-        <Text style={styles.subtitle}>
-          Vue d'ensemble de l'activité de l'application
-        </Text>
+        <TouchableOpacity 
+          style={styles.backButton} 
+          onPress={() => navigation.goBack()}
+        >
+          <Ionicons name="arrow-back" size={24} color="#fff" />
+        </TouchableOpacity>
+        <View style={styles.headerContent}>
+          <Text style={styles.title}>Panel administrateur</Text>
+          <Text style={styles.subtitle}>
+            Vue d'ensemble de l'activité de l'application
+          </Text>
+        </View>
       </View>
 
       {loading ? (
@@ -87,7 +96,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   header: {
+    flexDirection: 'row',
+    alignItems: 'center',
     marginBottom: 24,
+  },
+  backButton: {
+    padding: 8,
+    marginRight: 16,
+  },
+  headerContent: {
+    flex: 1,
   },
   title: {
     color: "#fff",
