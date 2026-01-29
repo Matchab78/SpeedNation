@@ -32,6 +32,7 @@ export default function EventFormScreen({ navigation, route }) {
     (initialEvent?.visibility || "private") === "public"
   );
   const [makeFeatured, setMakeFeatured] = useState(!!initialEvent?.is_featured);
+  const [maxParticipants, setMaxParticipants] = useState(initialEvent?.max_participants?.toString() || '');
   const [selectedImage, setSelectedImage] = useState(null);
 
   const previewImageSource = useMemo(() => {
@@ -82,6 +83,7 @@ export default function EventFormScreen({ navigation, route }) {
           location: location.trim(),
           image_url: null,
           visibility: isPublic ? "public" : "private",
+          max_participants: maxParticipants ? parseInt(maxParticipants, 10) : null,
         });
 
         if (error) {
@@ -98,6 +100,7 @@ export default function EventFormScreen({ navigation, route }) {
           event_date: date.trim(),
           location: location.trim(),
           visibility: isPublic ? "public" : "private",
+          max_participants: maxParticipants ? parseInt(maxParticipants, 10) : null,
         };
 
         const { error } = await eventService.updateEvent(initialEvent.id, user.id, updates);
@@ -139,7 +142,9 @@ export default function EventFormScreen({ navigation, route }) {
       }
 
       // Retour + refresh
-      navigation.navigate("EventsHome", { refresh: true, createdEvent });
+      if (navigation.canGoBack()) {
+        navigation.goBack(); // Retour à l'écran précédent (EventsScreen)
+      }
     } catch (err) {
       console.error("Erreur save EventFormScreen:", err);
       Alert.alert("Erreur", "Une erreur inattendue est survenue");
@@ -268,6 +273,17 @@ export default function EventFormScreen({ navigation, route }) {
                 </Text>
               </TouchableOpacity>
             </View>
+
+            <Text style={styles.label}>Nombre de places limité (optionnel)</Text>
+            <TextInput
+              style={styles.input}
+              value={maxParticipants}
+              onChangeText={setMaxParticipants}
+              placeholder="Ex: 100 (laisser vide pour illimité)"
+              placeholderTextColor="#777"
+              keyboardType="numeric"
+              editable={!saving}
+            />
 
             <TouchableOpacity
               style={styles.rowToggle}

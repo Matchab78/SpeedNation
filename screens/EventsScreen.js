@@ -45,10 +45,23 @@ export default function EventsScreen({ navigation }) {
   }, [refreshTick]);
 
   useEffect(() => {
-    const unsub = navigation.addListener("focus", () => {
-      setRefreshTick((v) => v + 1);
+    const unsubscribe = navigation.addListener('focus', () => {
+      // Rafraîchir les données à chaque fois que l'écran obtient le focus
+      setRefreshTick(prev => prev + 1);
     });
-    return unsub;
+
+    // Écouter les paramètres de navigation pour le rafraîchissement
+    const unsubscribeBeforeRemove = navigation.addListener('beforeRemove', (e) => {
+      // Vérifier si on revient du formulaire avec une demande de rafraîchissement
+      if (e.data?.action?.type === 'NAVIGATE' && e.data?.action?.payload?.params?.refresh) {
+        setRefreshTick(prev => prev + 1);
+      }
+    });
+
+    return () => {
+      unsubscribe();
+      unsubscribeBeforeRemove();
+    };
   }, [navigation]);
 
   const featuredEvent = useMemo(
@@ -61,8 +74,18 @@ export default function EventsScreen({ navigation }) {
     [events, featuredEvent]
   );
 
-  const goCreate = () => navigation.navigate("EventForm", { mode: "create" });
-  const goEdit = (event) => navigation.navigate("EventForm", { mode: "edit", event });
+  const goCreate = () => navigation.navigate("EventForm", { 
+    mode: "create",
+    // Ajouter un identifiant unique pour forcer le rafraîchissement au retour
+    key: Date.now()
+  });
+  
+  const goEdit = (event) => navigation.navigate("EventForm", { 
+    mode: "edit", 
+    event,
+    // Ajouter un identifiant unique pour forcer le rafraîchissement au retour
+    key: Date.now()
+  });
 
   const handleToggleFavorite = (eventId) => {
     setFavoriteIds((prev) =>
@@ -159,6 +182,12 @@ export default function EventsScreen({ navigation }) {
       />
 
       <View style={styles.cardTextContainer}>
+        {item.visibility !== "public" && (
+          <View style={styles.privateBadge}>
+            <Text style={styles.privateBadgeText}>Privé (non publié)</Text>
+          </View>
+        )}
+
         <Text style={styles.cardTitle}>{item.title}</Text>
         <Text style={styles.cardSubtitle}>
           {item.event_date} • {item.location}
@@ -242,6 +271,12 @@ export default function EventsScreen({ navigation }) {
               >
                 <Text style={styles.heroEditText}>Modifier</Text>
               </TouchableOpacity>
+            )}
+
+            {featuredEvent.visibility !== "public" && (
+              <View style={styles.heroPrivateTag}>
+                <Text style={styles.heroPrivateTagText}>Privé (non publié)</Text>
+              </View>
             )}
 
             <Text style={styles.heroTitle}>{featuredEvent.title}</Text>
@@ -383,6 +418,21 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: "600",
   },
+  heroPrivateTag: {
+    alignSelf: "flex-start",
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 999,
+    backgroundColor: "rgba(234,88,12,0.24)",
+    borderWidth: 1,
+    borderColor: "#fb923c",
+    marginBottom: 6,
+  },
+  heroPrivateTagText: {
+    color: "#ffedd5",
+    fontSize: 11,
+    fontWeight: "600",
+  },
   heroButton: {
     backgroundColor: "#8916CB",
     paddingHorizontal: 18,
@@ -412,6 +462,22 @@ const styles = StyleSheet.create({
   },
   cardTextContainer: {
     flex: 1,
+  },
+
+  privateBadge: {
+    alignSelf: "flex-start",
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 999,
+    backgroundColor: "rgba(234,88,12,0.18)",
+    borderWidth: 1,
+    borderColor: "#ea580c",
+    marginBottom: 4,
+  },
+  privateBadgeText: {
+    color: "#fed7aa",
+    fontSize: 10,
+    fontWeight: "600",
   },
 
   cardTitle: {

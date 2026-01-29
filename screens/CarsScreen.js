@@ -13,6 +13,7 @@ import {
   KeyboardAvoidingView,
   ScrollView,
   Platform,
+  Switch,
 } from "react-native";
 import { useAuth } from "../utils/authContext";
 import { carService } from "../services/carService";
@@ -20,7 +21,7 @@ import { authService } from "../services/authService";
 import { storageService } from "../services/storageService";
 
 export default function CarsScreen({ navigation }) {
-  const { user, profile, refreshUser, signOut } = useAuth();
+  const { user, profile, refreshUser, signOut, isAdmin } = useAuth();
   const [activeTab, setActiveTab] = useState("cars");
   const [cars, setCars] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -55,6 +56,7 @@ export default function CarsScreen({ navigation }) {
     location: "",
     age: "",
     avatarUri: null, // URI locale de l'image sélectionnée
+    showAdminRole: true,
   });
 
   useEffect(() => {
@@ -68,6 +70,9 @@ export default function CarsScreen({ navigation }) {
           location: profile.location || "",
           age: profile.age ? profile.age.toString() : "",
           avatarUri: null,
+          // Par défaut on affiche le badge si admin, sauf si le profil a choisi de le cacher
+          showAdminRole:
+            profile.show_admin_role === false ? false : profile.role === "admin",
         });
       }
     } else {
@@ -369,6 +374,8 @@ export default function CarsScreen({ navigation }) {
         location: editProfile.location.trim() || null,
         age: editProfile.age ? parseInt(editProfile.age) : null,
         avatar_url: avatarUrl,
+        // Contrôle uniquement la visibilité du badge, pas le rôle réel
+        show_admin_role: editProfile.showAdminRole,
       };
 
       const { error } = await authService.updateProfile(user.id, updates);
@@ -501,6 +508,17 @@ export default function CarsScreen({ navigation }) {
           <Text style={styles.menuText}>☰</Text>
         </TouchableOpacity>
 
+        {isAdmin && (
+          <TouchableOpacity
+            style={styles.adminPanelButton}
+            onPress={() => navigation.navigate("AdminPanel")}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.adminPanelIcon}>⛨</Text>
+            <Text style={styles.adminPanelText}>Panel</Text>
+          </TouchableOpacity>
+        )}
+
         <TouchableOpacity onPress={() => setShowEditProfileModal(true)}>
           {profile?.avatar_url ? (
             <Image source={{ uri: profile.avatar_url }} style={styles.avatar} />
@@ -536,6 +554,12 @@ export default function CarsScreen({ navigation }) {
           <Text style={styles.followers}>
             {profile.followers_count.toLocaleString()} FOLLOWERS
           </Text>
+        )}
+
+        {isAdmin && profile?.show_admin_role !== false && (
+          <View style={styles.roleBadge}>
+            <Text style={styles.roleBadgeText}>Administrateur</Text>
+          </View>
         )}
       </View>
 
@@ -1007,6 +1031,21 @@ export default function CarsScreen({ navigation }) {
                     returnKeyType="done"
                   />
 
+                  <View style={styles.adminToggleRow}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.adminToggleLabel}>Statut administrateur</Text>
+                      <Text style={styles.adminToggleSubtitle}>
+                        Afficher ou masquer le rôle Administrateur sur ton profil
+                      </Text>
+                    </View>
+                    <Switch
+                      value={editProfile.showAdminRole}
+                      onValueChange={(value) =>
+                        setEditProfile({ ...editProfile, showAdminRole: value })
+                      }
+                    />
+                  </View>
+
                   <View style={styles.modalButtons}>
                     <TouchableOpacity
                       style={[styles.modalButton, styles.cancelButton]}
@@ -1110,6 +1149,31 @@ const styles = StyleSheet.create({
     padding: 12,
   },
 
+  adminPanelButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    alignSelf: "flex-start",
+    paddingHorizontal: 18,
+    paddingVertical: 8,
+    borderRadius: 18,
+    backgroundColor: "#131722",
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.08)",
+    marginBottom: 16,
+  },
+
+  adminPanelIcon: {
+    fontSize: 16,
+    color: "#fff",
+    marginRight: 8,
+  },
+
+  adminPanelText: {
+    color: "#fff",
+    fontSize: 14,
+    fontWeight: "600",
+  },
+
   avatar: {
     width: 90,
     height: 90,
@@ -1150,6 +1214,22 @@ const styles = StyleSheet.create({
     marginTop: 6,
     fontSize: 12,
     letterSpacing: 1,
+  },
+
+  roleBadge: {
+    marginTop: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 999,
+    backgroundColor: "#131722",
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.15)",
+  },
+
+  roleBadgeText: {
+    color: "#fff",
+    fontSize: 12,
+    fontWeight: "600",
   },
 
   menuText: {
@@ -1205,6 +1285,26 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 26,
     fontWeight: "300",
+  },
+
+  adminToggleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginTop: 16,
+    marginBottom: 8,
+  },
+
+  adminToggleLabel: {
+    color: "#fff",
+    fontSize: 14,
+    fontWeight: "600",
+    marginBottom: 2,
+  },
+
+  adminToggleSubtitle: {
+    color: "#888",
+    fontSize: 12,
   },
 
   carsListContent: {

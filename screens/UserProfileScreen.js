@@ -13,6 +13,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { supabase } from "../config/supabase";
 import { messagingService } from "../services/messagingService";
+import { authService } from "../services/authService";
 import { useAuth } from "../utils/authContext";
 
 const { width } = Dimensions.get("window");
@@ -33,7 +34,7 @@ export default function UserProfileScreen({ route, navigation }) {
   const [followersCount, setFollowersCount] = useState(0);
   const [followLoading, setFollowLoading] = useState(false);
 
-  const isMe = useMemo(() => meId && meId === userId, [meId, userId]);
+  const isMe = useMemo(() => meId && user && meId === userId && user.id === userId, [meId, user, userId]);
 
   useEffect(() => {
     init();
@@ -56,14 +57,13 @@ export default function UserProfileScreen({ route, navigation }) {
       loadFollowersCount(),
       uid ? loadFollowState(uid) : Promise.resolve(),
     ]);
-
     setLoading(false);
   };
 
   const loadProfile = async () => {
     const { data, error } = await supabase
       .from("profiles")
-      .select("id, full_name, avatar_url, profession, location")
+      .select("id, full_name, avatar_url, profession, location, role, show_role_public")
       .eq("id", userId)
       .single();
 
@@ -72,6 +72,24 @@ export default function UserProfileScreen({ route, navigation }) {
       return;
     }
     setProfile(data);
+  };
+
+  const toggleRoleVisibility = async () => {
+    if (!isMe || !profile) return;
+
+    const next = profile.show_role_public === false ? true : false;
+
+    const { error } = await authService.updateProfile(userId, {
+      show_role_public: next,
+    });
+
+    if (error) {
+      console.log("toggleRoleVisibility error:", error);
+      Alert.alert("Erreur", "Impossible de mettre à jour la visibilité du rôle.");
+      return;
+    }
+
+    setProfile((prev) => (prev ? { ...prev, show_role_public: next } : prev));
   };
 
   const loadCars = async () => {
@@ -230,7 +248,7 @@ export default function UserProfileScreen({ route, navigation }) {
     <View style={styles.container}>
       {/* HEADER (retour en haut à droite) */}
       <View style={styles.header}>
-        <View style={{ flex: 1 }} />
+        <View style={styles.headerLeft} />
         <TouchableOpacity style={styles.headerBtn} onPress={() => navigation.goBack()}>
           <Text style={styles.headerBtnText}>Retour</Text>
           <Ionicons name="arrow-forward" size={18} color="#fff" style={{ marginLeft: 6 }} />
@@ -250,6 +268,28 @@ export default function UserProfileScreen({ route, navigation }) {
 
         <View style={{ flex: 1 }}>
           <Text style={styles.name}>{profile.full_name || "Utilisateur"}</Text>
+
+          {profile.show_role_public !== false && !!profile.role && (
+            <View style={styles.roleBadgeRow}>
+              <View style={styles.roleBadge}>
+                <Text style={styles.roleBadgeText}>
+                  {profile.role === "admin" ? "Administrateur" : profile.role}
+                </Text>
+              </View>
+
+              {isMe && (
+                <TouchableOpacity
+                  onPress={toggleRoleVisibility}
+                  style={styles.roleToggleBtn}
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.roleToggleText}>
+                    {profile.show_role_public === false ? "Afficher" : "Cacher"}
+                  </Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          )}
 
           <View style={styles.statsRow}>
             <View style={styles.stat}>
@@ -322,6 +362,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
   },
+  headerLeft: { flex: 1, flexDirection: "row", alignItems: "center" },
   headerBtn: {
     flexDirection: "row",
     alignItems: "center",
@@ -334,9 +375,54 @@ const styles = StyleSheet.create({
   },
   headerBtnText: { color: "#fff", fontSize: 14 },
 
+  adminPanelBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: 12,
+    backgroundColor: "#1f2933",
+    borderWidth: 1,
+    borderColor: "#374151",
+    marginRight: 12,
+  },
+  adminPanelText: {
+    color: "#fff",
+    fontSize: 13,
+    marginLeft: 6,
+  },
+
   profileTop: { flexDirection: "row", paddingHorizontal: 16, paddingBottom: 10, gap: 14 },
   avatar: { width: 90, height: 90, borderRadius: 45 },
   name: { color: "#fff", fontSize: 18, fontWeight: "700" },
+
+  roleBadgeRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginTop: 6,
+  },
+  roleBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 999,
+    backgroundColor: "#1f2937",
+    borderWidth: 1,
+    borderColor: "#4b5563",
+  },
+  roleBadgeText: {
+    color: "#e5e7eb",
+    fontSize: 11,
+    fontWeight: "600",
+  },
+  roleToggleBtn: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  roleToggleText: {
+    color: "#9ca3af",
+    fontSize: 11,
+  },
 
   statsRow: { flexDirection: "row", gap: 16, marginTop: 10 },
   stat: { alignItems: "center" },
