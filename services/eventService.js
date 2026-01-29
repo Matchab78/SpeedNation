@@ -5,13 +5,20 @@ import { supabase } from '../config/supabase';
  */
 export const eventService = {
   /**
-   * Récupérer tous les événements
+   * Récupérer tous les événements (publics pour tous, privés seulement pour admins)
    */
-  async getAllEvents() {
+  async getAllEvents(userRole = 'user') {
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from('events')
-        .select('*')
+        .select('*');
+
+      // Si l'utilisateur n'est pas admin, ne montrer que les événements publics
+      if (userRole !== 'admin') {
+        query = query.eq('visibility', 'public');
+      }
+
+      const { data, error } = await query
         .order('is_featured', { ascending: false })
         .order('event_date', { ascending: true });
 
@@ -75,7 +82,7 @@ export const eventService = {
           event_time: eventData.event_time || null,
           location: eventData.location,
           image_url: eventData.image_url || null,
-          visibility: eventData.visibility || 'private',
+          visibility: eventData.visibility || 'public',
         })
         .select()
         .single();

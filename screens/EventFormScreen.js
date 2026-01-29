@@ -77,7 +77,7 @@ export default function EventFormScreen({ navigation, route }) {
         const { data, error } = await eventService.createEvent(user.id, {
           title: title.trim(),
           description: description.trim() || null,
-          event_date: date.trim(), // YYYY-MM-DD
+          event_date: date.trim(),
           event_time: null,
           location: location.trim(),
           image_url: null,
@@ -139,7 +139,7 @@ export default function EventFormScreen({ navigation, route }) {
       }
 
       // Retour + refresh
-      navigation.navigate("EventsHome", { refresh: true, createdEvent });
+      navigation.goBack();
     } catch (err) {
       console.error("Erreur save EventFormScreen:", err);
       Alert.alert("Erreur", "Une erreur inattendue est survenue");
@@ -219,15 +219,17 @@ export default function EventFormScreen({ navigation, route }) {
               editable={!saving}
             />
 
-            <Text style={styles.label}>Description (optionnel)</Text>
+            <Text style={styles.label}>Description</Text>
             <TextInput
-              style={[styles.input, styles.textarea]}
+              style={styles.input}
               value={description}
               onChangeText={setDescription}
-              placeholder="Décris l'événement…"
-              placeholderTextColor="#777"
-              editable={!saving}
+              placeholder="Décris ton événement..."
+              placeholderTextColor="#737373"
               multiline
+              numberOfLines={4}
+              editable={!saving}
+              textAlignVertical="top"
             />
 
             <Text style={styles.label}>Visibilité</Text>

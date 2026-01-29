@@ -26,7 +26,7 @@ export default function EventsScreen({ navigation }) {
     const fetchEvents = async () => {
       setLoading(true);
       try {
-        const { data, error } = await eventService.getAllEvents();
+        const { data, error } = await eventService.getAllEvents(isAdmin ? 'admin' : 'user');
         if (error) {
           console.error("Erreur de chargement des événements:", error);
           Alert.alert("Erreur", "Impossible de charger les événements");
@@ -42,7 +42,7 @@ export default function EventsScreen({ navigation }) {
     };
 
     fetchEvents();
-  }, [refreshTick]);
+  }, [refreshTick, isAdmin]);
 
   useEffect(() => {
     const unsub = navigation.addListener("focus", () => {
@@ -276,12 +276,13 @@ export default function EventsScreen({ navigation }) {
           data={otherEvents}
           keyExtractor={(item) => item.id}
           renderItem={renderEventCard}
-          contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 20 }}
+          contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 100 }}
           ListEmptyComponent={
             <Text style={styles.emptyText}>
               Aucun événement pour le moment.
             </Text>
           }
+          showsVerticalScrollIndicator={false}
         />
       )}
 
