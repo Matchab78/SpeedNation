@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#000000">
+    <meta name="color-scheme" content="dark">
+    <title>Test Permissions Caméra</title>
+    <style>
+        body {
+            background: #000;
+            color: #fff;
+            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+            padding: 20px;
+            text-align: center;
+        }
+        .button {
+            background: #8916CB;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 10px;
+            margin: 10px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        .status {
+            background: #1a1a1a;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 10px 0;
+        }
+        .success { border-left: 4px solid #4CAF50; }
+        .error { border-left: 4px solid #f44336; }
+        .warning { border-left: 4px solid #ff9800; }
+    </style>
+</head>
+<body>
+    <h1>📱 Test Permissions Web App</h1>
+    
+    <div class="status" id="https-status">
+        <strong>Statut HTTPS:</strong> <span id="https-check">Vérification...</span>
+    </div>
+    
+    <div class="status" id="user-agent">
+        <strong>Navigateur:</strong> <span id="browser-info">Détection...</span>
+    </div>
+    
+    <div class="status" id="permissions-status">
+        <strong>Permissions Support:</strong> <span id="permissions-check">Vérification...</span>
+    </div>
+    
+    <h2>📷 Test Caméra/Galerie</h2>
+    
+    <button class="button" onclick="testCamera()">
+        📸 Tester Caméra
+    </button>
+    
+    <button class="button" onclick="testGallery()">
+        🖼️ Tester Galerie
+    </button>
+    
+    <button class="button" onclick="testFileInput()">
+        📁 Test Input File
+    </button>
+    
+    <div id="results"></div>
+    
+    <script>
+        // Vérifier HTTPS
+        const isHttps = location.protocol === 'https:';
+        document.getElementById('https-check').textContent = isHttps ? '✅ HTTPS' : '❌ HTTP (Problème!)';
+        document.getElementById('https-status').className = isHttps ? 'status success' : 'status error';
+        
+        // Info navigateur
+        document.getElementById('browser-info').textContent = navigator.userAgent;
+        
+        // Vérifier support permissions
+        const hasPermissions = 'permissions' in navigator;
+        document.getElementById('permissions-check').textContent = hasPermissions ? '✅ Supporté' : '❌ Non supporté';
+        document.getElementById('permissions-status').className = hasPermissions ? 'status success' : 'status warning';
+        
+        function log(message, type = 'info') {
+            const results = document.getElementById('results');
+            const div = document.createElement('div');
+            div.className = `status ${type}`;
+            div.innerHTML = message;
+            results.appendChild(div);
+        }
+        
+        async function testCamera() {
+            try {
+                log('📸 Test caméra en cours...', 'info');
+                
+                // Demander permission caméra
+                const stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: true 
+                });
+                
+                log('✅ Caméra accessible!', 'success');
+                stream.getTracks().forEach(track => track.stop());
+                
+                // Maintenant tester l'input file
+                testFileInput();
+                
+            } catch (error) {
+                log(`❌ Erreur caméra: ${error.message}`, 'error');
+            }
+        }
+        
+        async function testGallery() {
+            try {
+                log('🖼️ Test galerie en cours...', 'info');
+                
+                // Input file pour galerie
+                const input = document.createElement('input');
+                input.type = 'file';
+                input.accept = 'image/*';
+                
+                input.onchange = (e) => {
+                    const file = e.target.files[0];
+                    if (file) {
+                        log(`✅ Fichier sélectionné: ${file.name} (${file.size} bytes)`, 'success');
+                        
+                        // Preview
+                        const reader = new FileReader();
+                        reader.onload = (e) => {
+                            const img = document.createElement('img');
+                            img.src = e.target.result;
+                            img.style.maxWidth = '200px';
+                            img.style.maxHeight = '200px';
+                            img.style.borderRadius = '10px';
+                            img.style.marginTop = '10px';
+                            log('📷 Preview:', 'info');
+                            document.getElementById('results').appendChild(img);
+                        };
+                        reader.readAsDataURL(file);
+                    } else {
+                        log('❌ Aucun fichier sélectionné', 'error');
+                    }
+                };
+                
+                input.click();
+                
+            } catch (error) {
+                log(`❌ Erreur galerie: ${error.message}`, 'error');
+            }
+        }
+        
+        async function testFileInput() {
+            try {
+                log('📁 Test input file...', 'info');
+                
+                const input = document.createElement('input');
+                input.type = 'file';
+                input.accept = 'image/*';
+                input.capture = 'environment'; // Force caméra sur mobile
+                
+                input.onchange = (e) => {
+                    const file = e.target.files[0];
+                    if (file) {
+                        log(`✅ Fichier capturé: ${file.name}`, 'success');
+                    }
+                };
+                
+                input.click();
+                
+            } catch (error) {
+                log(`❌ Erreur input: ${error.message}`, 'error');
+            }
+        }
+        
+        // Instructions
+        if (!isHttps) {
+            log('⚠️ IMPORTANT: Votre site doit être en HTTPS pour accéder à la caméra/galerie!', 'warning');
+            log('📋 Solution: Installez un certificat SSL sur OVH ou utilisez Cloudflare', 'info');
+        }
+        
+        log('💡 Astuce: Ajoutez cette web app à votre écran d\'accueil iOS pour de meilleures permissions', 'info');
+    </script>
+</body>
+</html>

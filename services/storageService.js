@@ -28,6 +28,11 @@ export const storageService = {
    */
   async pickImageFromGallery() {
     try {
+      // Pour le web, on utilise un input file HTML
+      if (typeof window !== 'undefined' && window.document) {
+        return await this.pickImageWeb();
+      }
+
       const permissions = await this.requestPermissions();
       if (!permissions.gallery) {
         return {
@@ -69,6 +74,11 @@ export const storageService = {
    */
   async takePhoto() {
     try {
+      // Pour le web, on utilise un input file HTML
+      if (typeof window !== 'undefined' && window.document) {
+        return await this.pickImageWeb();
+      }
+
       const permissions = await this.requestPermissions();
       if (!permissions.camera) {
         return {
@@ -104,13 +114,113 @@ export const storageService = {
   },
 
   /**
+   * Sélectionner une image sur le web (input file HTML)
+   */
+  async pickImageWeb() {
+    return new Promise((resolve) => {
+      try {
+        console.log('🎯 pickImageWeb démarré');
+        console.log('🌐 Protocol:', location.protocol);
+        console.log('📱 User-Agent:', navigator.userAgent);
+        
+        // Vérifier si on est en HTTPS
+        if (location.protocol !== 'https:' && location.hostname !== 'localhost') {
+          console.error('❌ Pas HTTPS');
+          resolve({
+            cancelled: true,
+            error: 'HTTPS requis pour accéder à la caméra/galerie.',
+          });
+          return;
+        }
+
+        console.log('✅ HTTPS OK, création input...');
+        
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = 'image/*';
+        input.style.display = 'none';
+        document.body.appendChild(input);
+        
+        // iOS: essayer sans capture d'abord
+        if (/iPad|iPhone|iPod/.test(navigator.userAgent)) {
+          console.log('📱 iOS détecté, configuration spéciale...');
+          // Ne pas mettre capture pour iOS, laisse le choix
+        } else {
+          input.capture = 'environment';
+        }
+        
+        input.onchange = (event) => {
+          console.log('📁 Fichier sélectionné:', event.target.files);
+          const file = event.target.files[0];
+          if (file) {
+            console.log('✅ Fichier trouvé:', file.name);
+            const reader = new FileReader();
+            reader.onload = (e) => {
+              console.log('📷 Lecture réussie');
+              resolve({
+                cancelled: false,
+                uri: e.target.result,
+                type: file.type,
+                width: null,
+                height: null,
+                file: file,
+              });
+            };
+            reader.onerror = () => {
+              console.error('❌ Erreur lecture fichier');
+              resolve({
+                cancelled: true,
+                error: 'Erreur lors de la lecture du fichier',
+              });
+            };
+            reader.readAsDataURL(file);
+          } else {
+            console.log('❌ Aucun fichier sélectionné');
+            resolve({ cancelled: true });
+          }
+          document.body.removeChild(input);
+        };
+
+        input.oncancel = () => {
+          console.log('❌ Sélection annulée');
+          resolve({ cancelled: true });
+          document.body.removeChild(input);
+        };
+
+        input.onerror = (error) => {
+          console.error('❌ Erreur input:', error);
+          resolve({
+            cancelled: true,
+            error: 'Erreur lors de l\'accès au fichier',
+          });
+          document.body.removeChild(input);
+        };
+
+        // Forcer le click avec timeout
+        setTimeout(() => {
+          console.log('👆 Trigger click...');
+          input.click();
+        }, 100);
+        
+      } catch (error) {
+        console.error('❌ Erreur pickImageWeb:', error);
+        resolve({
+          cancelled: true,
+          error: `Erreur: ${error.message}`,
+        });
+      }
+    });
+  },
+
+  /**
    * Uploader une image vers Supabase Storage
    * @param {string} imageUri - URI locale de l'image
    * @param {string} bucket - Nom du bucket (avatars, car-images, event-images)
    * @param {string} fileName - Nom du fichier (optionnel, généré automatiquement si non fourni)
+   * @param {File} file - Fichier direct (pour le web)
    * @returns {Promise<{url: string | null, error: any}>}
    */
-  async uploadImage(imageUri, bucket, fileName = null) {
+  async uploadImage(imageUri, bucket, fileName = null, file = null) {
     try {
       // Générer un nom de fichier unique si non fourni
       if (!fileName) {
@@ -119,21 +229,27 @@ export const storageService = {
         fileName = `${timestamp}-${random}.jpg`;
       }
 
-      // Lire le fichier en binaire : fetch().blob() n'existe pas en React Native,
-      // on utilise XMLHttpRequest avec responseType='arraybuffer'
-      const arrayBuffer = await new Promise((resolve, reject) => {
-        const xhr = new XMLHttpRequest();
-        xhr.open('GET', imageUri);
-        xhr.responseType = 'arraybuffer';
-        xhr.onload = () => resolve(xhr.response);
-        xhr.onerror = () => reject(new Error('Impossible de lire le fichier image'));
-        xhr.send();
-      });
+      let uploadData;
 
-      // Upload vers Supabase Storage avec les données binaires
+      // Pour le web, utiliser directement le fichier
+      if (file && typeof window !== 'undefined') {
+        uploadData = file;
+      } else {
+        // Pour mobile natif, lire le fichier en binaire
+        uploadData = await new Promise((resolve, reject) => {
+          const xhr = new XMLHttpRequest();
+          xhr.open('GET', imageUri);
+          xhr.responseType = 'arraybuffer';
+          xhr.onload = () => resolve(xhr.response);
+          xhr.onerror = () => reject(new Error('Impossible de lire le fichier image'));
+          xhr.send();
+        });
+      }
+
+      // Upload vers Supabase Storage
       const { data, error } = await supabase.storage
         .from(bucket)
-        .upload(fileName, arrayBuffer, {
+        .upload(fileName, uploadData, {
           contentType: 'image/jpeg',
           upsert: false, // Ne pas écraser si existe déjà
         });
@@ -158,17 +274,17 @@ export const storageService = {
   /**
    * Uploader une photo de profil
    */
-  async uploadAvatar(userId, imageUri) {
+  async uploadAvatar(userId, imageUri, file = null) {
     const fileName = `avatar-${userId}-${Date.now()}.jpg`;
-    return await this.uploadImage(imageUri, 'avatars', fileName);
+    return await this.uploadImage(imageUri, 'avatars', fileName, file);
   },
 
   /**
    * Uploader une photo de voiture
    */
-  async uploadCarImage(carId, imageUri) {
+  async uploadCarImage(carId, imageUri, file = null) {
     const fileName = `car-${carId}-${Date.now()}.jpg`;
-    return await this.uploadImage(imageUri, 'car-images', fileName);
+    return await this.uploadImage(imageUri, 'car-images', fileName, file);
   },
 
   /**

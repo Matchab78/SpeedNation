@@ -39,6 +39,7 @@ export default function Profile({ navigation }) {
     power_hp: "",
     image_url: "",
     imageUri: null,
+    imageFile: null, // Ajout du fichier pour le web
   });
   const [editCar, setEditCar] = useState({
     name: "",
@@ -49,6 +50,7 @@ export default function Profile({ navigation }) {
     power_hp: "",
     image_url: "",
     imageUri: null,
+    imageFile: null, // Ajout du fichier pour le web
   });
   const [editProfile, setEditProfile] = useState({
     full_name: "",
@@ -56,6 +58,7 @@ export default function Profile({ navigation }) {
     location: "",
     age: "",
     avatarUri: null,
+    avatarFile: null, // Ajout du fichier pour le web
     showAdminRole: true,
   });
 
@@ -69,6 +72,7 @@ export default function Profile({ navigation }) {
           location: profile.location || "",
           age: profile.age ? profile.age.toString() : "",
           avatarUri: null,
+          avatarFile: null, // Réinitialiser le fichier web
           showAdminRole: profile.show_admin_role === false ? false : true,
         });
       }
@@ -107,7 +111,11 @@ export default function Profile({ navigation }) {
           onPress: async () => {
             const result = await storageService.pickImageFromGallery();
             if (!result.cancelled && result.uri) {
-              setNewCar((c) => ({ ...c, imageUri: result.uri }));
+              setNewCar((c) => ({ 
+                ...c, 
+                imageUri: result.uri,
+                imageFile: result.file || null // Garder le fichier pour le web
+              }));
             } else if (result.error) {
               Alert.alert("Erreur", result.error);
             }
@@ -118,7 +126,11 @@ export default function Profile({ navigation }) {
           onPress: async () => {
             const result = await storageService.takePhoto();
             if (!result.cancelled && result.uri) {
-              setNewCar((c) => ({ ...c, imageUri: result.uri }));
+              setNewCar((c) => ({ 
+                ...c, 
+                imageUri: result.uri,
+                imageFile: result.file || null // Garder le fichier pour le web
+              }));
             } else if (result.error) {
               Alert.alert("Erreur", result.error);
             }
@@ -139,7 +151,11 @@ export default function Profile({ navigation }) {
           onPress: async () => {
             const result = await storageService.pickImageFromGallery();
             if (!result.cancelled && result.uri) {
-              setEditCar((c) => ({ ...c, imageUri: result.uri }));
+              setEditCar((c) => ({ 
+                ...c, 
+                imageUri: result.uri,
+                imageFile: result.file || null // Garder le fichier pour le web
+              }));
             } else if (result.error) {
               Alert.alert("Erreur", result.error);
             }
@@ -150,7 +166,11 @@ export default function Profile({ navigation }) {
           onPress: async () => {
             const result = await storageService.takePhoto();
             if (!result.cancelled && result.uri) {
-              setEditCar((c) => ({ ...c, imageUri: result.uri }));
+              setEditCar((c) => ({ 
+                ...c, 
+                imageUri: result.uri,
+                imageFile: result.file || null // Garder le fichier pour le web
+              }));
             } else if (result.error) {
               Alert.alert("Erreur", result.error);
             }
@@ -197,7 +217,8 @@ export default function Profile({ navigation }) {
       if (editCar.imageUri) {
         const { url, error: uploadError } = await storageService.uploadCarImage(
           editingCarId,
-          editCar.imageUri
+          editCar.imageUri,
+          editCar.imageFile || null // Ajout du fichier pour le web
         );
         if (uploadError) {
           Alert.alert("Erreur", "Impossible d'uploader l'image");
@@ -258,7 +279,8 @@ export default function Profile({ navigation }) {
       if (newCar.imageUri) {
         const { url, error: uploadError } = await storageService.uploadCarImage(
           `temp-${Date.now()}`,
-          newCar.imageUri
+          newCar.imageUri,
+          newCar.imageFile || null // Ajout du fichier pour le web
         );
         if (uploadError) {
           Alert.alert("Erreur", "Impossible d'uploader l'image");
@@ -318,7 +340,11 @@ export default function Profile({ navigation }) {
           onPress: async () => {
             const result = await storageService.pickImageFromGallery();
             if (!result.cancelled && result.uri) {
-              setEditProfile({ ...editProfile, avatarUri: result.uri });
+              setEditProfile({ 
+                ...editProfile, 
+                avatarUri: result.uri,
+                avatarFile: result.file || null // Garder le fichier pour le web
+              });
             } else if (result.error) {
               Alert.alert("Erreur", result.error);
             }
@@ -329,7 +355,11 @@ export default function Profile({ navigation }) {
           onPress: async () => {
             const result = await storageService.takePhoto();
             if (!result.cancelled && result.uri) {
-              setEditProfile({ ...editProfile, avatarUri: result.uri });
+              setEditProfile({ 
+                ...editProfile, 
+                avatarUri: result.uri,
+                avatarFile: result.file || null // Garder le fichier pour le web
+              });
             } else if (result.error) {
               Alert.alert("Erreur", result.error);
             }
@@ -348,7 +378,8 @@ export default function Profile({ navigation }) {
       if (editProfile.avatarUri) {
         const { url, error: uploadError } = await storageService.uploadAvatar(
           user.id,
-          editProfile.avatarUri
+          editProfile.avatarUri,
+          editProfile.avatarFile || null // Ajout du fichier pour le web
         );
         if (uploadError) {
           Alert.alert(

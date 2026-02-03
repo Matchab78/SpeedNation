@@ -1,0 +1,24 @@
+{
+  "name": "SpeedNation",
+  "short_name": "SpeedNation",
+  "description": "Application de gestion de courses automobiles",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#000000",
+  "theme_color": "#000000",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/assets/assets/logo.c70afabb0345276d10f6c396bc0bb84e.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/assets/assets/logo.c70afabb0345276d10f6c396bc0bb84e.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

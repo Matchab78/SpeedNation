@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#000000">
+    <title>Upload par URL</title>
+    <style>
+        body {
+            background: #000;
+            color: #fff;
+            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+            padding: 20px;
+        }
+        .input {
+            background: #1a1a1a;
+            border: 1px solid #333;
+            color: #fff;
+            padding: 15px;
+            border-radius: 10px;
+            width: 100%;
+            margin: 10px 0;
+            font-size: 16px;
+        }
+        .button {
+            background: #8916CB;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 10px;
+            margin: 10px 0;
+            font-size: 16px;
+            cursor: pointer;
+            width: 100%;
+        }
+        .preview {
+            max-width: 200px;
+            max-height: 200px;
+            border-radius: 10px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <h2>📸 Upload Photo par URL</h2>
+    <p>Si la caméra/galerie ne fonctionne pas, utilisez une URL d'image.</p>
+    
+    <input type="url" class="input" id="imageUrl" placeholder="Collez l'URL d'une image ici...">
+    <button class="button" onclick="previewImage()">📷 Aperçu</button>
+    <button class="button" onclick="uploadToSupabase()">☁️ Uploader vers SpeedNation</button>
+    
+    <div id="preview"></div>
+    <div id="result"></div>
+    
+    <script>
+        function previewImage() {
+            const url = document.getElementById('imageUrl').value;
+            if (!url) {
+                alert('Veuillez entrer une URL');
+                return;
+            }
+            
+            const preview = document.getElementById('preview');
+            preview.innerHTML = `<img src="${url}" class="preview" onerror="this.onerror=null; this.src=''; this.alt='Image invalide';">`;
+        }
+        
+        async function uploadToSupabase() {
+            const url = document.getElementById('imageUrl').value;
+            if (!url) {
+                alert('Veuillez entrer une URL');
+                return;
+            }
+            
+            // Simuler l'upload vers Supabase
+            document.getElementById('result').innerHTML = '⏳ Upload en cours...';
+            
+            // En réalité, il faudrait l'API Supabase ici
+            setTimeout(() => {
+                document.getElementById('result').innerHTML = '✅ URL prête à être sauvegardée: ' + url;
+            }, 1000);
+        }
+    </script>
+</body>
+</html>
