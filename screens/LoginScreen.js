@@ -62,13 +62,11 @@ export default function LoginScreen({ navigation }) {
       }
 
       if (data?.user) {
-        // Connexion réussie - Supabase gère automatiquement la persistance de session
-        // La session est stockée localement et persiste entre les redémarrages
-        Alert.alert("Succès", "Connexion réussie !", [
+        // Connexion réussie
+        Alert.alert("Succès", "Connexion réussie ! Bienvenue sur SpeedNation.", [
           {
-            text: "OK",
+            text: "C'est parti",
             onPress: () => {
-              // Retourner à l'écran précédent
               navigation.goBack();
             },
           },
@@ -119,11 +117,11 @@ export default function LoginScreen({ navigation }) {
 
       if (data?.user) {
         Alert.alert(
-          "Compte créé",
-          "Ton compte a été créé. Vérifie ta boîte mail pour confirmer ton adresse avant de te connecter.",
+          "Compte créé !",
+          "Ton compte a été créé avec succès. Tu peux maintenant te connecter.",
           [
             {
-              text: "OK",
+              text: "Se connecter",
               onPress: () => {
                 setIsSignUpMode(false);
               },
