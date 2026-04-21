@@ -1,4 +1,5 @@
 import * as ImagePicker from 'expo-image-picker';
+import { storageApi } from './apiService';
 
 /**
  * Service pour gérer l'upload d'images
