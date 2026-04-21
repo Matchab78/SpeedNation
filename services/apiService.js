@@ -156,19 +156,32 @@ export const profilesApi = {
 };
 
 export const storageApi = {
-  upload: (fileUri, bucket) => {
+  upload: async (fileUri, bucket) => {
     const formData = new FormData();
-    // On Web, we can just pass the URI or File object
-    // On Mobile (React Native), we need to format it specifically
     const filename = fileUri.split('/').pop();
     const match = /\.(\w+)$/.exec(filename);
     const type = match ? `image/${match[1]}` : `image`;
 
-    formData.append('file', {
-      uri: fileUri,
-      name: filename,
-      type: type,
-    });
+    // Sur Web, il faut transformer l'URI en Blob pour que multer le reconnaisse
+    if (typeof window !== 'undefined') {
+      try {
+        const response = await fetch(fileUri);
+        const blob = await response.blob();
+        formData.append('file', blob, filename);
+      } catch (e) {
+        console.error('Erreur conversion Blob:', e);
+        // Fallback au format standard si fetch échoue
+        formData.append('file', { uri: fileUri, name: filename, type });
+      }
+    } else {
+      // Format standard pour React Native (Mobile)
+      formData.append('file', {
+        uri: fileUri,
+        name: filename,
+        type: type,
+      });
+    }
+    
     formData.append('bucket', bucket);
 
     return apiService.request('/storage/upload', {
