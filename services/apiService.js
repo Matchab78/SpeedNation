@@ -130,6 +130,7 @@ export const adminApi = {
   toggleEventFeature: (id, isFeatured) => 
     apiService.put(`/admin/events/${id}/feature`, { is_featured: isFeatured }),
   deleteUser: (id) => apiService.delete(`/admin/users/${id}`),
+  updateUserRole: (id, role) => apiService.put(`/admin/users/${id}/role`, { role }),
 };
 
 export const profilesApi = {

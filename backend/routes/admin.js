@@ -101,6 +101,32 @@ router.put('/events/:id/feature', async (req, res) => {
   }
 });
 
+// Update user role (admin only)
+router.put('/users/:id/role', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { role } = req.body;
+    
+    if (!['user', 'admin'].includes(role)) {
+      return res.status(400).json({ error: 'Invalid role' });
+    }
+    
+    const result = await query(
+      'UPDATE profiles SET role = $1, updated_at = NOW() WHERE id = $2 RETURNING *',
+      [role, id]
+    );
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    
+    res.json({ data: result.rows[0], message: `User role updated to ${role}` });
+  } catch (error) {
+    console.error('Update user role error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Delete user (admin only)
 router.delete('/users/:id', async (req, res) => {
   try {

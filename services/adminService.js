@@ -69,7 +69,7 @@ export const adminService = {
    */
   async promoteToAdmin(userId) {
     try {
-      const { data } = await profilesApi.update(userId, { role: 'admin' });
+      const { data } = await adminApi.updateUserRole(userId, 'admin');
       return { data, error: null };
     } catch (error) {
       return { data: null, error };
@@ -81,7 +81,7 @@ export const adminService = {
    */
   async demoteFromAdmin(userId) {
     try {
-      const { data } = await profilesApi.update(userId, { role: 'user' });
+      const { data } = await adminApi.updateUserRole(userId, 'user');
       return { data, error: null };
     } catch (error) {
       return { data: null, error };
