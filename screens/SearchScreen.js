@@ -8,11 +8,12 @@ import {
   Image,
   ActivityIndicator,
   TouchableOpacity,
+  Alert,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { supabase } from "../config/supabase";
 import { messagingService } from "../services/messagingService";
 import { useAuth } from "../utils/authContext";
+import { profilesApi } from "../services/apiService";
 
 export default function SearchScreen({ navigation }) {
   const { user } = useAuth();
@@ -29,109 +30,106 @@ export default function SearchScreen({ navigation }) {
 
     const t = setTimeout(() => {
       searchProfiles();
-    }, 300);
+    }, 400);
 
     return () => clearTimeout(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [query]);
 
   const searchProfiles = async () => {
     setLoading(true);
-
-    const { data, error } = await supabase
-      .from("profiles")
-      .select("id, full_name, avatar_url")
-      .ilike("full_name", `%${query}%`)
-      .limit(20);
-
-    if (!error) {
-      setResults(data || []);
-    } else {
+    try {
+      const response = await profilesApi.search(query);
+      if (response.data) {
+        setResults(response.data);
+      } else {
+        setResults([]);
+      }
+    } catch (error) {
+      console.error("Search error:", error);
       setResults([]);
-      console.log("Supabase error:", error);
+    } finally {
+      setLoading(false);
     }
-
-    setLoading(false);
   };
 
   const handleMessageUser = async (profile) => {
-    if (!user?.id) {
-      return;
-    }
+    if (!user?.id || !profile?.id || profile.id === user.id) return;
 
-    if (!profile?.id || profile.id === user.id) {
-      return;
-    }
+    try {
+      const res = await messagingService.getOrCreatePrivateConversation(user.id, profile.id);
+      if (res?.error) throw res.error;
 
-    const res = await messagingService.getOrCreatePrivateConversation(user.id, profile.id);
-    if (res?.error) {
-      console.error("Erreur getOrCreatePrivateConversation:", res.error);
-      return;
+      navigation.navigate("Chat", {
+        conversationId: res.conversation.id,
+        otherUser: {
+          id: profile.id,
+          full_name: profile.full_name,
+          avatar_url: profile.avatar_url,
+        },
+      });
+    } catch (error) {
+      Alert.alert("Erreur", "Impossible d'ouvrir la conversation.");
     }
-
-    navigation.navigate("Chat", {
-      conversationId: res.conversation.id,
-      otherUser: {
-        id: profile.id,
-        full_name: profile.full_name,
-        avatar_url: profile.avatar_url,
-      },
-    });
   };
+
+  const renderItem = ({ item }) => (
+    <View style={styles.row}>
+      <TouchableOpacity
+        style={styles.rowLeft}
+        onPress={() => navigation.navigate("UserProfile", { userId: item.id })}
+      >
+        <Image
+          style={styles.avatar}
+          source={{
+            uri: item.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(item.full_name || "U")}`,
+          }}
+        />
+        <Text style={styles.name}>{item.full_name || "Utilisateur"}</Text>
+      </TouchableOpacity>
+
+      {user?.id !== item.id && (
+        <TouchableOpacity
+          style={styles.messageBtn}
+          onPress={() => handleMessageUser(item)}
+        >
+          <Ionicons name="chatbubble-ellipses" size={16} color="#fff" />
+          <Text style={styles.messageBtnText}>Message</Text>
+        </TouchableOpacity>
+      )}
+    </View>
+  );
 
   return (
     <View style={styles.container}>
       <View style={styles.searchBar}>
-        <Ionicons name="search" size={22} color="#8e8e8e" style={{ marginRight: 8 }} />
+        <Ionicons name="search" size={20} color="#666" style={{ marginRight: 10 }} />
         <TextInput
           style={styles.input}
-          placeholder="Rechercher une personne..."
-          placeholderTextColor="#8e8e8e"
+          placeholder="Rechercher un membre..."
+          placeholderTextColor="#666"
           value={query}
           onChangeText={setQuery}
           autoCapitalize="none"
         />
+        {query.length > 0 && (
+          <TouchableOpacity onPress={() => setQuery("")}>
+            <Ionicons name="close-circle" size={18} color="#666" />
+          </TouchableOpacity>
+        )}
       </View>
 
-      {loading && <ActivityIndicator style={{ marginTop: 16 }} />}
+      {loading && <ActivityIndicator style={{ marginTop: 20 }} color="#8916CB" />}
 
       <FlatList
         data={results}
         keyExtractor={(item) => item.id}
-        style={{ marginTop: 16 }}
-        renderItem={({ item }) => (
-          <View style={styles.row}>
-            <TouchableOpacity
-              style={styles.rowLeft}
-              activeOpacity={0.8}
-              onPress={() => navigation.navigate("UserProfile", { userId: item.id })}
-            >
-              <Image
-                style={styles.avatar}
-                source={{
-                  uri:
-                    item.avatar_url ||
-                    `https://ui-avatars.com/api/?name=${encodeURIComponent(item.full_name || "User")}`,
-                }}
-              />
-              <Text style={styles.name}>{item.full_name || "Utilisateur"}</Text>
-            </TouchableOpacity>
-
-            {!!user?.id && user.id !== item.id && (
-              <TouchableOpacity
-                style={styles.messageBtn}
-                activeOpacity={0.85}
-                onPress={() => handleMessageUser(item)}
-              >
-                <Ionicons name="chatbubble-ellipses" size={16} color="#fff" />
-                <Text style={styles.messageBtnText}>Message</Text>
-              </TouchableOpacity>
-            )}
-          </View>
-        )}
+        renderItem={renderItem}
+        contentContainerStyle={{ paddingTop: 10 }}
         ListEmptyComponent={
           !loading && query.trim().length >= 2 ? (
-            <Text style={styles.empty}>Aucun résultat</Text>
+            <View style={styles.emptyWrap}>
+              <Text style={styles.empty}>Aucun membre trouvé avec ce nom</Text>
+            </View>
           ) : null
         }
       />
@@ -140,68 +138,40 @@ export default function SearchScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#000",
-    paddingTop: 70,
-    paddingHorizontal: 20,
-  },
+  container: { flex: 1, backgroundColor: "#000", paddingTop: 70, paddingHorizontal: 16 },
   searchBar: {
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "#1a1a1a",
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
+    borderRadius: 14,
+    paddingHorizontal: 15,
+    paddingVertical: 12,
     borderWidth: 1,
     borderColor: "#333",
   },
-  input: {
-    flex: 1,
-    color: "#fff",
-    fontSize: 16,
-  },
+  input: { flex: 1, color: "#fff", fontSize: 16 },
   row: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 12,
+    paddingVertical: 15,
     borderBottomWidth: 1,
-    borderBottomColor: "#222",
+    borderBottomColor: "#111",
   },
-  rowLeft: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  avatar: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
-    marginRight: 12,
-  },
-  name: {
-    color: "#fff",
-    fontSize: 16,
-  },
+  rowLeft: { flex: 1, flexDirection: "row", alignItems: "center" },
+  avatar: { width: 45, height: 45, borderRadius: 22.5, marginRight: 15, backgroundColor: '#222' },
+  name: { color: "#fff", fontSize: 16, fontWeight: '600' },
   messageBtn: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
-    backgroundColor: "#8916CB",
+    gap: 8,
+    backgroundColor: "#222",
     paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 12,
+    paddingHorizontal: 15,
+    borderRadius: 10,
     borderWidth: 1,
     borderColor: "#333",
   },
-  messageBtnText: {
-    color: "#fff",
-    fontWeight: "700",
-    fontSize: 13,
-  },
-  empty: {
-    color: "#777",
-    textAlign: "center",
-    marginTop: 24,
-  },
+  messageBtnText: { color: "#fff", fontWeight: "600", fontSize: 13 },
+  emptyWrap: { marginTop: 40, alignItems: 'center' },
+  empty: { color: "#555", fontSize: 14 },
 });

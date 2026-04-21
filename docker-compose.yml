@@ -1,14 +1,63 @@
 version: '3.8'
 
+networks:
+  speednation-network:
+    driver: bridge
+
 services:
-  app:
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_DB=speednation
+      - POSTGRES_USER=speednation_user
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
+    restart: unless-stopped
+    networks:
+      - speednation-network
+
+  frontend:
     build:
       context: .
       dockerfile: Dockerfile
-    ports:
-      - "80:80"
     restart: unless-stopped
     environment:
       - NODE_ENV=production
-      - SUPABASE_URL=${SUPABASE_URL}
-      - SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
+    networks:
+      - speednation-network
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_NAME=speednation
+      - DB_USER=speednation_user
+      - DB_PASSWORD=${POSTGRES_PASSWORD}
+    depends_on:
+      - postgres
+    networks:
+      - speednation-network
+
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx-proxy.conf:/etc/nginx/conf.d/default.conf
+    depends_on:
+      - frontend
+      - backend
+    restart: unless-stopped
+    networks:
+      - speednation-network
+
+volumes:
+  postgres_data:

@@ -1,5 +1,4 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { supabase } from '../config/supabase';
 import { authService } from '../services/authService';
 
 const AuthContext = createContext({});
@@ -22,21 +21,19 @@ export const AuthProvider = ({ children }) => {
     // Vérifier l'état de connexion au démarrage
     checkUser();
 
-    // Écouter les changements d'authentification
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        if (event === 'SIGNED_IN' && session?.user) {
-          await loadUserData(session.user.id);
-        } else if (event === 'SIGNED_OUT') {
-          setUser(null);
-          setProfile(null);
-          setIsAdmin(false);
-        }
-      }
-    );
+    // Écouter les changements d'authentification personnalisés
+    const handleAuthChange = () => {
+      checkUser();
+    };
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('auth-status-changed', handleAuthChange);
+    }
 
     return () => {
-      subscription.unsubscribe();
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('auth-status-changed', handleAuthChange);
+      }
     };
   }, []);
 
@@ -68,8 +65,8 @@ export const AuthProvider = ({ children }) => {
       // Charger le profil
       const { data: profileData, error: profileError } = await authService.getUserProfile(userId);
       
-      if (!profileError && profileData) {
-        setProfile(profileData);
+      if (!profileError && profileData?.data?.profile) {
+        setProfile(profileData.data.profile);
         
         // Vérifier si admin
         const { isAdmin: adminStatus } = await authService.isAdmin(userId);

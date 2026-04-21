@@ -1,28 +1,75 @@
-import { supabase } from '../config/supabase';
+import { adminApi, profilesApi } from './apiService';
 
 /**
  * Service pour gérer les administrateurs
- * ⚠️ Ces fonctions doivent être utilisées avec précaution et uniquement par des super-admins
  */
 export const adminService = {
   /**
+   * Récupérer les statistiques globales
+   */
+  async getStats() {
+    try {
+      const response = await adminApi.getStats();
+      return { data: response?.data, error: null };
+    } catch (error) {
+      return { data: null, error };
+    }
+  },
+
+  /**
+   * Récupérer la liste des utilisateurs
+   */
+  async getAllUsers() {
+    try {
+      const response = await adminApi.getUsers();
+      return { data: response?.data || [], error: null };
+    } catch (error) {
+      return { data: [], error };
+    }
+  },
+
+  /**
+   * Récupérer la liste des événements
+   */
+  async getAllEvents() {
+    try {
+      const response = await adminApi.getEvents();
+      return { data: response?.data || [], error: null };
+    } catch (error) {
+      return { data: [], error };
+    }
+  },
+
+  /**
+   * Mettre en avant ou non un événement
+   */
+  async toggleEventFeature(eventId, isFeatured) {
+    try {
+      const response = await adminApi.toggleEventFeature(eventId, isFeatured);
+      return { data: response?.data, error: null };
+    } catch (error) {
+      return { data: null, error };
+    }
+  },
+
+  /**
+   * Supprimer définitivement un utilisateur
+   */
+  async deleteUser(userId) {
+    try {
+      await adminApi.deleteUser(userId);
+      return { error: null };
+    } catch (error) {
+      return { error };
+    }
+  },
+
+  /**
    * Promouvoir un utilisateur au rôle d'administrateur
-   * ⚠️ Cette fonction nécessite des privilèges élevés
-   * En production, utilisez plutôt une fonction Supabase sécurisée
    */
   async promoteToAdmin(userId) {
     try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .update({
-          role: 'admin',
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', userId)
-        .select()
-        .single();
-
-      if (error) throw error;
+      const { data } = await profilesApi.update(userId, { role: 'admin' });
       return { data, error: null };
     } catch (error) {
       return { data: null, error };
@@ -34,39 +81,10 @@ export const adminService = {
    */
   async demoteFromAdmin(userId) {
     try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .update({
-          role: 'user',
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', userId)
-        .select()
-        .single();
-
-      if (error) throw error;
-      return { data, error: null };
-    } catch (error) {
-      return { data: null, error };
-    }
-  },
-
-  /**
-   * Récupérer tous les administrateurs
-   */
-  async getAllAdmins() {
-    try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('id, full_name, role, created_at')
-        .eq('role', 'admin')
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
+      const { data } = await profilesApi.update(userId, { role: 'user' });
       return { data, error: null };
     } catch (error) {
       return { data: null, error };
     }
   },
 };
-

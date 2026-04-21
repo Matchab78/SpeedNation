@@ -135,7 +135,7 @@ export default function EventsScreen({ navigation }) {
     try {
       // Si déjà mis en avant, on enlève la mise en avant
       if (event.is_featured) {
-        const { error } = await eventService.clearFeaturedEvent();
+        const { error } = await eventService.clearFeaturedEvent(event.id);
         if (error) {
           console.error("Erreur clearFeaturedEvent:", error);
           Alert.alert(

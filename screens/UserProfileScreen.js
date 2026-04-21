@@ -11,10 +11,10 @@ import {
   Alert,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { supabase } from "../config/supabase";
 import { messagingService } from "../services/messagingService";
 import { authService } from "../services/authService";
 import { useAuth } from "../utils/authContext";
+import { profilesApi, carsApi } from "../services/apiService";
 
 const { width } = Dimensions.get("window");
 const GRID_GAP = 2;
@@ -23,443 +23,228 @@ const ITEM_SIZE = Math.floor((width - GRID_GAP * (COLS - 1)) / COLS);
 
 export default function UserProfileScreen({ route, navigation }) {
   const { userId } = route.params;
-  const { user } = useAuth();
+  const { user: currentUser } = useAuth();
 
   const [profile, setProfile] = useState(null);
   const [cars, setCars] = useState([]);
   const [loading, setLoading] = useState(true);
-
-  const [meId, setMeId] = useState(null);
   const [isFollowing, setIsFollowing] = useState(false);
-  const [followersCount, setFollowersCount] = useState(0);
   const [followLoading, setFollowLoading] = useState(false);
 
-  const isMe = useMemo(() => meId && user && meId === userId && user.id === userId, [meId, user, userId]);
+  const isMe = useMemo(() => currentUser && currentUser.id === userId, [currentUser, userId]);
 
   useEffect(() => {
-    init();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    loadData();
+  }, [userId, currentUser]);
 
-  const init = async () => {
+  const loadData = async () => {
     setLoading(true);
-
-    // ✅ récup user de façon fiable
-    const { data: sessionData, error: sessionErr } = await supabase.auth.getSession();
-    if (sessionErr) console.log("getSession error:", sessionErr);
-
-    const uid = sessionData?.session?.user?.id || null;
-    setMeId(uid);
-
-    await Promise.all([
-      loadProfile(),
-      loadCars(),
-      loadFollowersCount(),
-      uid ? loadFollowState(uid) : Promise.resolve(),
-    ]);
-    setLoading(false);
+    try {
+      await Promise.all([
+        loadProfile(),
+        loadCars(),
+        loadFollowStatus()
+      ]);
+    } catch (e) {
+      console.error("loadData error:", e);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const loadProfile = async () => {
-    const { data, error } = await supabase
-      .from("profiles")
-      .select("id, full_name, avatar_url, profession, location, role, show_role_public")
-      .eq("id", userId)
-      .single();
-
-    if (error) {
-      console.log("loadProfile error:", error);
-      return;
+    try {
+      const response = await profilesApi.getById(userId);
+      if (response.data) {
+        setProfile(response.data);
+      }
+    } catch (error) {
+      console.error("loadProfile error:", error);
     }
-    setProfile(data);
+  };
+
+  const loadCars = async () => {
+    try {
+      const response = await carsApi.getByUserId(userId);
+      if (response.data) {
+        setCars(response.data.filter(c => !!c.image_url));
+      }
+    } catch (error) {
+      console.error("loadCars error:", error);
+    }
+  };
+
+  const loadFollowStatus = async () => {
+    if (!currentUser || isMe) return;
+    try {
+      const response = await profilesApi.getFollowStatus(userId, currentUser.id);
+      setIsFollowing(response.data.is_following);
+    } catch (error) {
+      console.error("loadFollowStatus error:", error);
+    }
+  };
+
+  const toggleFollow = async () => {
+    if (followLoading || !currentUser || isMe) return;
+    
+    setFollowLoading(true);
+    try {
+      if (isFollowing) {
+        await profilesApi.unfollow(userId, currentUser.id);
+        setIsFollowing(false);
+        setProfile(prev => ({ ...prev, followers_count: Math.max(0, (prev.followers_count || 0) - 1) }));
+      } else {
+        await profilesApi.follow(userId, currentUser.id);
+        setIsFollowing(true);
+        setProfile(prev => ({ ...prev, followers_count: (prev.followers_count || 0) + 1 }));
+      }
+    } catch (error) {
+      Alert.alert("Erreur", "Impossible de mettre à jour le suivi.");
+    } finally {
+      setFollowLoading(false);
+    }
+  };
+
+  const handleMessage = async () => {
+    if (!currentUser?.id || !userId || isMe) return;
+
+    try {
+      const res = await messagingService.getOrCreatePrivateConversation(currentUser.id, userId);
+      if (res?.error) throw res.error;
+
+      navigation.navigate("Chat", {
+        conversationId: res.conversation.id,
+        otherUser: {
+          id: profile.id,
+          full_name: profile.full_name,
+          avatar_url: profile.avatar_url,
+        },
+      });
+    } catch (error) {
+      Alert.alert("Erreur", "Impossible d'ouvrir la conversation.");
+    }
   };
 
   const toggleRoleVisibility = async () => {
     if (!isMe || !profile) return;
-
-    const next = profile.show_role_public === false ? true : false;
-
-    const { error } = await authService.updateProfile(userId, {
-      show_role_public: next,
-    });
-
-    if (error) {
-      console.log("toggleRoleVisibility error:", error);
-      Alert.alert("Erreur", "Impossible de mettre à jour la visibilité du rôle.");
-      return;
+    const next = !profile.show_role_public;
+    try {
+      await authService.updateProfile(userId, { show_role_public: next });
+      setProfile(prev => ({ ...prev, show_role_public: next }));
+    } catch (error) {
+      Alert.alert("Erreur", "Impossible de modifier la visibilité.");
     }
-
-    setProfile((prev) => (prev ? { ...prev, show_role_public: next } : prev));
-  };
-
-  const loadCars = async () => {
-    const { data, error } = await supabase
-      .from("cars")
-      .select("id, image_url, created_at")
-      .eq("user_id", userId)
-      .order("created_at", { ascending: false })
-      .limit(60);
-
-    if (error) {
-      console.log("loadCars error:", error);
-      return;
-    }
-    setCars((data || []).filter((c) => !!c.image_url));
-  };
-
-  const loadFollowersCount = async () => {
-    const { count, error } = await supabase
-      .from("follows")
-      .select("*", { count: "exact", head: true })
-      .eq("following_id", userId);
-
-    if (error) {
-      console.log("loadFollowersCount error:", error);
-      return;
-    }
-    setFollowersCount(count || 0);
-  };
-
-  const loadFollowState = async (currentUserId) => {
-    if (!currentUserId || currentUserId === userId) {
-      setIsFollowing(false);
-      return;
-    }
-
-    const { data, error } = await supabase
-      .from("follows")
-      .select("id")
-      .eq("follower_id", currentUserId)
-      .eq("following_id", userId)
-      .maybeSingle();
-
-    if (error) {
-      console.log("loadFollowState error:", error);
-      return;
-    }
-    setIsFollowing(!!data);
-  };
-
-  const toggleFollow = async () => {
-    if (followLoading) return;
-
-    // ✅ si pas connecté → message clair
-    if (!meId) {
-      Alert.alert("Connexion requise", "Tu dois être connecté pour follow.");
-      return;
-    }
-
-    // ✅ éviter follow soi-même
-    if (isMe) {
-      Alert.alert("Info", "Tu ne peux pas te follow toi-même.");
-      return;
-    }
-
-    setFollowLoading(true);
-
-    if (isFollowing) {
-      const { error } = await supabase
-        .from("follows")
-        .delete()
-        .eq("follower_id", meId)
-        .eq("following_id", userId);
-
-      if (error) {
-        console.log("unfollow error:", error);
-        Alert.alert("Erreur unfollow", error.message || "Impossible de unfollow.");
-        setFollowLoading(false);
-        return;
-      }
-
-      setIsFollowing(false);
-      setFollowersCount((v) => Math.max(0, v - 1));
-      setFollowLoading(false);
-      return;
-    }
-
-    const { error } = await supabase.from("follows").insert({
-      follower_id: meId,
-      following_id: userId,
-    });
-
-    if (error) {
-      console.log("follow error:", error);
-      Alert.alert("Erreur follow", error.message || "Impossible de follow.");
-      setFollowLoading(false);
-      return;
-    }
-
-    setIsFollowing(true);
-    setFollowersCount((v) => v + 1);
-    setFollowLoading(false);
-  };
-
-  const handleMessage = async () => {
-    if (!user?.id || !profile?.id || profile.id === user.id) return;
-
-    const res = await messagingService.getOrCreatePrivateConversation(user.id, profile.id);
-    if (res?.error) {
-      console.error("Erreur getOrCreatePrivateConversation:", res.error);
-      return;
-    }
-
-    navigation.navigate("Chat", {
-      conversationId: res.conversation.id,
-      otherUser: {
-        id: profile.id,
-        full_name: profile.full_name,
-        avatar_url: profile.avatar_url,
-      },
-    });
   };
 
   const renderPhoto = ({ item, index }) => {
     const marginRight = index % COLS !== COLS - 1 ? GRID_GAP : 0;
-    const marginBottom = GRID_GAP;
-
     return (
       <TouchableOpacity
-        style={{ width: ITEM_SIZE, height: ITEM_SIZE, marginRight, marginBottom }}
-        activeOpacity={0.85}
+        style={{ width: ITEM_SIZE, height: ITEM_SIZE, marginRight, marginBottom: GRID_GAP }}
         onPress={() => navigation.navigate("CarDetail", { carId: item.id, imageUrl: item.image_url })}
       >
-        <Image source={{ uri: item.image_url }} style={styles.gridImage} resizeMode="cover" />
+        <Image source={{ uri: item.image_url }} style={styles.gridImage} />
       </TouchableOpacity>
     );
   };
 
-  if (loading) {
-    return (
-      <View style={styles.center}>
-        <ActivityIndicator />
-      </View>
-    );
-  }
-
-  if (!profile) {
-    return (
-      <View style={styles.center}>
-        <Text style={{ color: "#fff" }}>Profil introuvable</Text>
-      </View>
-    );
-  }
+  if (loading) return <View style={styles.center}><ActivityIndicator color="#fff" /></View>;
+  if (!profile) return <View style={styles.center}><Text style={{ color: "#fff" }}>Profil introuvable</Text></View>;
 
   return (
     <View style={styles.container}>
-      {/* HEADER (retour en haut à droite) */}
       <View style={styles.header}>
-        <View style={styles.headerLeft} />
         <TouchableOpacity style={styles.headerBtn} onPress={() => navigation.goBack()}>
+          <Ionicons name="arrow-back" size={20} color="#fff" />
           <Text style={styles.headerBtnText}>Retour</Text>
-          <Ionicons name="arrow-forward" size={18} color="#fff" style={{ marginLeft: 6 }} />
         </TouchableOpacity>
       </View>
 
-      {/* TOP PROFIL */}
       <View style={styles.profileTop}>
         <Image
-          source={{
-            uri:
-              profile.avatar_url ||
-              `https://ui-avatars.com/api/?name=${encodeURIComponent(profile.full_name || "User")}`,
-          }}
+          source={{ uri: profile.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(profile.full_name || "U")}` }}
           style={styles.avatar}
         />
-
         <View style={{ flex: 1 }}>
           <Text style={styles.name}>{profile.full_name || "Utilisateur"}</Text>
-
+          
           {profile.show_role_public !== false && !!profile.role && (
             <View style={styles.roleBadgeRow}>
               <View style={styles.roleBadge}>
-                <Text style={styles.roleBadgeText}>
-                  {profile.role === "admin" ? "Administrateur" : profile.role}
-                </Text>
+                <Text style={styles.roleBadgeText}>{profile.role === 'admin' ? 'Administrateur' : profile.role}</Text>
               </View>
-
               {isMe && (
-                <TouchableOpacity
-                  onPress={toggleRoleVisibility}
-                  style={styles.roleToggleBtn}
-                  activeOpacity={0.8}
-                >
-                  <Text style={styles.roleToggleText}>
-                    {profile.show_role_public === false ? "Afficher" : "Cacher"}
-                  </Text>
+                <TouchableOpacity onPress={toggleRoleVisibility}>
+                  <Text style={styles.roleToggleText}>Cacher</Text>
                 </TouchableOpacity>
               )}
             </View>
           )}
 
           <View style={styles.statsRow}>
-            <View style={styles.stat}>
-              <Text style={styles.statNumber}>{cars.length}</Text>
-              <Text style={styles.statLabel}>Photos</Text>
-            </View>
-
-            <View style={styles.stat}>
-              <Text style={styles.statNumber}>{followersCount}</Text>
-              <Text style={styles.statLabel}>Followers</Text>
-            </View>
+            <View style={styles.stat}><Text style={styles.statNumber}>{cars.length}</Text><Text style={styles.statLabel}>Photos</Text></View>
+            <View style={styles.stat}><Text style={styles.statNumber}>{profile.followers_count || 0}</Text><Text style={styles.statLabel}>Followers</Text></View>
           </View>
 
-          {!!profile.profession && <Text style={styles.bio}>{profile.profession}</Text>}
-          {!!profile.location && <Text style={styles.bio}>{profile.location}</Text>}
-
           {!isMe && (
-            <TouchableOpacity
-              style={[styles.followBtn, isFollowing && styles.followingBtn]}
-              onPress={toggleFollow}
-              activeOpacity={0.8}
-              disabled={followLoading}
-            >
-              <Text style={styles.followText}>
-                {followLoading ? "..." : isFollowing ? "Suivi ✓" : "Follow"}
-              </Text>
-            </TouchableOpacity>
+            <View style={styles.actionRow}>
+              <TouchableOpacity
+                style={[styles.followBtn, isFollowing && styles.followingBtn]}
+                onPress={toggleFollow}
+                disabled={followLoading}
+              >
+                <Text style={styles.followText}>{followLoading ? "..." : isFollowing ? "Suivi ✓" : "Follow"}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.messageBtn} onPress={handleMessage}>
+                <Ionicons name="chatbubble-ellipses" size={18} color="#fff" />
+              </TouchableOpacity>
+            </View>
           )}
-
-          {!isMe && !!user?.id && (
-            <TouchableOpacity
-              style={styles.messageBtn}
-              onPress={handleMessage}
-              activeOpacity={0.85}
-            >
-              <Ionicons name="chatbubble-ellipses" size={16} color="#fff" />
-              <Text style={styles.messageBtnText}>Message</Text>
-            </TouchableOpacity>
-          )}
+          
+          <View style={styles.bioContainer}>
+             {!!profile.profession && <Text style={styles.bio}>{profile.profession}</Text>}
+             {!!profile.location && <Text style={styles.bio}>{profile.location}</Text>}
+          </View>
         </View>
       </View>
 
-      {/* GRILLE PHOTOS */}
-      {cars.length === 0 ? (
-        <View style={styles.emptyWrap}>
-          <Text style={styles.empty}>Aucune photo</Text>
-        </View>
-      ) : (
-        <FlatList
-          data={cars}
-          keyExtractor={(item) => item.id}
-          renderItem={renderPhoto}
-          numColumns={COLS}
-          contentContainerStyle={{ paddingTop: 12, paddingBottom: 120 }}
-          showsVerticalScrollIndicator={false}
-        />
-      )}
+      <FlatList
+        data={cars}
+        keyExtractor={(item) => item.id}
+        renderItem={renderPhoto}
+        numColumns={COLS}
+        contentContainerStyle={{ paddingTop: 12, paddingBottom: 100 }}
+        ListEmptyComponent={<View style={styles.emptyWrap}><Text style={styles.empty}>Aucune photo</Text></View>}
+      />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#000" },
+  container: { flex: 1, backgroundColor: "#000", paddingTop: 50 },
   center: { flex: 1, backgroundColor: "#000", justifyContent: "center", alignItems: "center" },
-
-  header: {
-    paddingTop: 50,
-    paddingHorizontal: 16,
-    paddingBottom: 10,
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  headerLeft: { flex: 1, flexDirection: "row", alignItems: "center" },
-  headerBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#1a1a1a",
-    borderWidth: 1,
-    borderColor: "#333",
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 12,
-  },
-  headerBtnText: { color: "#fff", fontSize: 14 },
-
-  adminPanelBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 6,
-    paddingHorizontal: 10,
-    borderRadius: 12,
-    backgroundColor: "#1f2933",
-    borderWidth: 1,
-    borderColor: "#374151",
-    marginRight: 12,
-  },
-  adminPanelText: {
-    color: "#fff",
-    fontSize: 13,
-    marginLeft: 6,
-  },
-
-  profileTop: { flexDirection: "row", paddingHorizontal: 16, paddingBottom: 10, gap: 14 },
-  avatar: { width: 90, height: 90, borderRadius: 45 },
-  name: { color: "#fff", fontSize: 18, fontWeight: "700" },
-
-  roleBadgeRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    marginTop: 6,
-  },
-  roleBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 999,
-    backgroundColor: "#1f2937",
-    borderWidth: 1,
-    borderColor: "#4b5563",
-  },
-  roleBadgeText: {
-    color: "#e5e7eb",
-    fontSize: 11,
-    fontWeight: "600",
-  },
-  roleToggleBtn: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-  },
-  roleToggleText: {
-    color: "#9ca3af",
-    fontSize: 11,
-  },
-
-  statsRow: { flexDirection: "row", gap: 16, marginTop: 10 },
+  header: { paddingHorizontal: 16, marginBottom: 15 },
+  headerBtn: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  headerBtnText: { color: "#fff", fontWeight: '600' },
+  profileTop: { flexDirection: "row", paddingHorizontal: 16, gap: 15, marginBottom: 20 },
+  avatar: { width: 85, height: 85, borderRadius: 42 },
+  name: { color: "#fff", fontSize: 20, fontWeight: "700" },
+  roleBadgeRow: { flexDirection: "row", alignItems: "center", gap: 10, marginTop: 5 },
+  roleBadge: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6, backgroundColor: "#333" },
+  roleBadgeText: { color: "#fff", fontSize: 11, fontWeight: "600" },
+  roleToggleText: { color: "#666", fontSize: 11 },
+  statsRow: { flexDirection: "row", gap: 20, marginTop: 12 },
   stat: { alignItems: "center" },
-  statNumber: { color: "#fff", fontWeight: "700", fontSize: 16 },
-  statLabel: { color: "#8e8e8e", fontSize: 12, marginTop: 2 },
-
-  bio: { color: "#aaa", marginTop: 6 },
-
-  followBtn: {
-    marginTop: 12,
-    backgroundColor: "#8916CB",
-    paddingVertical: 10,
-    alignItems: "center",
-    borderRadius: 14,
-  },
-  followingBtn: { backgroundColor: "#222", borderWidth: 1, borderColor: "#333" },
+  statNumber: { color: "#fff", fontSize: 16, fontWeight: "700" },
+  statLabel: { color: "#888", fontSize: 12 },
+  actionRow: { flexDirection: 'row', gap: 10, marginTop: 15 },
+  followBtn: { flex: 1, backgroundColor: "#8916CB", paddingVertical: 8, borderRadius: 10, alignItems: "center" },
+  followingBtn: { backgroundColor: "#1a1a1a", borderWidth: 1, borderColor: "#333" },
   followText: { color: "#fff", fontWeight: "700" },
-
-  messageBtn: {
-    marginTop: 10,
-    flexDirection: "row",
-    gap: 8,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "#1a1a1a",
-    borderWidth: 1,
-    borderColor: "#333",
-    paddingVertical: 10,
-    borderRadius: 14,
-  },
-  messageBtnText: {
-    color: "#fff",
-    fontWeight: "700",
-  },
-
+  messageBtn: { backgroundColor: "#1a1a1a", width: 40, height: 40, borderRadius: 10, alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: "#333" },
+  bioContainer: { marginTop: 10 },
+  bio: { color: "#888", fontSize: 13 },
   gridImage: { width: "100%", height: "100%", backgroundColor: "#111" },
-
-  emptyWrap: { flex: 1, alignItems: "center", justifyContent: "center", paddingBottom: 120 },
-  empty: { color: "#777" },
+  emptyWrap: { alignItems: "center", marginTop: 50 },
+  empty: { color: "#444" },
 });

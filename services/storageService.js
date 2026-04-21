@@ -1,8 +1,9 @@
-import { supabase } from '../config/supabase';
 import * as ImagePicker from 'expo-image-picker';
 
 /**
- * Service pour gérer l'upload d'images vers Supabase Storage
+ * Service pour gérer l'upload d'images
+ * NOTE: Le stockage d'images nécessite une solution externe (AWS S3, Cloudinary, etc.)
+ * Ce service est actuellement désactivé car nous utilisons PostgreSQL au lieu de Supabase
  */
 export const storageService = {
   /**
@@ -37,7 +38,6 @@ export const storageService = {
       }
 
       const result = await ImagePicker.launchImageLibraryAsync({
-        // Utiliser uniquement les images (valeur attendue: 'images')
         mediaTypes: ['images'],
         allowsEditing: true,
         aspect: [4, 3],
@@ -104,100 +104,40 @@ export const storageService = {
   },
 
   /**
-   * Uploader une image vers Supabase Storage
-   * @param {string} imageUri - URI locale de l'image
-   * @param {string} bucket - Nom du bucket (avatars, car-images, event-images)
-   * @param {string} fileName - Nom du fichier (optionnel, généré automatiquement si non fourni)
-   * @returns {Promise<{url: string | null, error: any}>}
+   * Uploader une image (non implémenté - nécessite S3, Cloudinary, etc.)
    */
   async uploadImage(imageUri, bucket, fileName = null) {
-    try {
-      // Générer un nom de fichier unique si non fourni
-      if (!fileName) {
-        const timestamp = Date.now();
-        const random = Math.random().toString(36).substring(2, 15);
-        fileName = `${timestamp}-${random}.jpg`;
-      }
-
-      // Lire le fichier en binaire : fetch().blob() n'existe pas en React Native,
-      // on utilise XMLHttpRequest avec responseType='arraybuffer'
-      const arrayBuffer = await new Promise((resolve, reject) => {
-        const xhr = new XMLHttpRequest();
-        xhr.open('GET', imageUri);
-        xhr.responseType = 'arraybuffer';
-        xhr.onload = () => resolve(xhr.response);
-        xhr.onerror = () => reject(new Error('Impossible de lire le fichier image'));
-        xhr.send();
-      });
-
-      // Upload vers Supabase Storage avec les données binaires
-      const { data, error } = await supabase.storage
-        .from(bucket)
-        .upload(fileName, arrayBuffer, {
-          contentType: 'image/jpeg',
-          upsert: false, // Ne pas écraser si existe déjà
-        });
-
-      if (error) {
-        console.error('Erreur upload:', error);
-        return { url: null, error };
-      }
-
-      // Récupérer l'URL publique
-      const { data: { publicUrl } } = supabase.storage
-        .from(bucket)
-        .getPublicUrl(fileName);
-
-      return { url: publicUrl, error: null };
-    } catch (error) {
-      console.error('Erreur lors de l\'upload:', error);
-      return { url: null, error };
-    }
+    console.warn('Storage non implémenté - utilisez S3, Cloudinary ou un service similaire');
+    return { url: null, error: { message: 'Storage non implémenté' } };
   },
 
   /**
    * Uploader une photo de profil
    */
   async uploadAvatar(userId, imageUri) {
-    const fileName = `avatar-${userId}-${Date.now()}.jpg`;
-    return await this.uploadImage(imageUri, 'avatars', fileName);
+    return await this.uploadImage(imageUri, 'avatars');
   },
 
   /**
    * Uploader une photo de voiture
    */
   async uploadCarImage(carId, imageUri) {
-    const fileName = `car-${carId}-${Date.now()}.jpg`;
-    return await this.uploadImage(imageUri, 'car-images', fileName);
+    return await this.uploadImage(imageUri, 'car-images');
   },
 
   /**
    * Uploader une image d'événement
    */
   async uploadEventImage(eventId, imageUri) {
-    const fileName = `event-${eventId}-${Date.now()}.jpg`;
-    return await this.uploadImage(imageUri, 'event-images', fileName);
+    return await this.uploadImage(imageUri, 'event-images');
   },
 
   /**
-   * Supprimer une image du storage
+   * Supprimer une image du storage (non implémenté)
    */
   async deleteImage(bucket, fileName) {
-    try {
-      const { error } = await supabase.storage
-        .from(bucket)
-        .remove([fileName]);
-
-      if (error) {
-        console.error('Erreur suppression:', error);
-        return { error };
-      }
-
-      return { error: null };
-    } catch (error) {
-      console.error('Erreur lors de la suppression:', error);
-      return { error };
-    }
+    console.warn('Storage non implémenté');
+    return { error: { message: 'Storage non implémenté' } };
   },
 };
 

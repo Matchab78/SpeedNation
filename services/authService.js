@@ -1,4 +1,4 @@
-import { supabase } from '../config/supabase';
+import { authApi } from './apiService';
 
 /**
  * Service d'authentification
@@ -6,49 +6,20 @@ import { supabase } from '../config/supabase';
 export const authService = {
   /**
    * Inscription d'un nouvel utilisateur
-   * Le profil est créé automatiquement via le trigger handle_new_user()
    */
   async signUp(email, password, userData = {}) {
     try {
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: {
-            full_name: userData.full_name,
-            profession: userData.profession,
-            location: userData.location,
-            age: userData.age,
-          },
-        },
-      });
-
-      if (error) throw error;
-
-      // Le profil est créé automatiquement par le trigger
-      // Mais on peut le mettre à jour si nécessaire
-      if (data.user) {
-        // Attendre un peu pour que le trigger s'exécute
-        await new Promise(resolve => setTimeout(resolve, 500));
-        
-        // Mettre à jour le profil si des données supplémentaires sont fournies
-        if (userData.full_name || userData.profession || userData.location || userData.age) {
-          const { error: profileError } = await supabase
-            .from('profiles')
-            .update({
-              full_name: userData.full_name || null,
-              profession: userData.profession || null,
-              location: userData.location || null,
-              age: userData.age || null,
-            })
-            .eq('id', data.user.id);
-
-          if (profileError) throw profileError;
-        }
+      console.log('authService.signUp called with:', { email, password: password ? '***' : undefined, userData });
+      const response = await authApi.signUp(email, password, userData.full_name || null, userData.profession || null, userData.location || null, userData.age || null);
+      console.log('authService.signUp response:', response);
+      
+      const user = response?.data;
+      if (user) {
+        return { data: { user }, error: null };
       }
-
-      return { data, error: null };
+      return { data: null, error: new Error('Réponse invalide du serveur') };
     } catch (error) {
+      console.error('authService.signUp error:', error);
       return { data: null, error };
     }
   },
@@ -58,14 +29,23 @@ export const authService = {
    */
   async signIn(email, password) {
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-
-      if (error) throw error;
-      return { data, error: null };
+      console.log('authService.signIn called for:', email);
+      const response = await authApi.signIn(email, password);
+      console.log('authService.signIn raw response:', response);
+      
+      const user = response?.data?.user;
+      if (user) {
+        console.log('authService.signIn success, user found:', user.email);
+        localStorage.setItem('user', JSON.stringify(user));
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new Event('auth-status-changed'));
+        }
+        return { data: { user }, error: null };
+      }
+      console.warn('authService.signIn failed: no user in response');
+      return { data: null, error: new Error('Réponse invalide du serveur') };
     } catch (error) {
+      console.error('authService.signIn error:', error);
       return { data: null, error };
     }
   },
@@ -75,8 +55,10 @@ export const authService = {
    */
   async signOut() {
     try {
-      const { error } = await supabase.auth.signOut();
-      if (error) throw error;
+      localStorage.removeItem('user');
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new Event('auth-status-changed'));
+      }
       return { error: null };
     } catch (error) {
       return { error };
@@ -88,8 +70,7 @@ export const authService = {
    */
   async getCurrentUser() {
     try {
-      const { data: { user }, error } = await supabase.auth.getUser();
-      if (error) throw error;
+      const user = JSON.parse(localStorage.getItem('user') || 'null');
       return { user, error: null };
     } catch (error) {
       return { user: null, error };
@@ -98,47 +79,11 @@ export const authService = {
 
   /**
    * Récupérer le profil complet de l'utilisateur
-   * Combine les données de auth.users et profiles
    */
   async getUserProfile(userId) {
     try {
-      // Récupérer le profil
-      const { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', userId)
-        .single();
-
-      if (profileError) {
-        // Si l'utilisateur n'a pas de profil, essayer de le créer
-        if (profileError.code === 'PGRST116') {
-          const { data: newProfile, error: createError } = await supabase
-            .from('profiles')
-            .insert({ id: userId })
-            .select()
-            .single();
-
-          if (createError) return { data: null, error: createError };
-          
-          // Récupérer l'email de l'utilisateur actuel si c'est lui
-          const { data: { user } } = await supabase.auth.getUser();
-          const userData = {
-            ...newProfile,
-            email: user?.id === userId ? user?.email : null,
-          };
-          return { data: userData, error: null };
-        }
-        throw profileError;
-      }
-
-      // Récupérer l'email de l'utilisateur actuel si c'est lui
-      const { data: { user } } = await supabase.auth.getUser();
-      const userData = {
-        ...profile,
-        email: user?.id === userId ? user?.email : null,
-      };
-
-      return { data: userData, error: null };
+      const data = await authApi.getUser(userId);
+      return { data, error: null };
     } catch (error) {
       return { data: null, error };
     }
@@ -149,17 +94,8 @@ export const authService = {
    */
   async updateProfile(userId, updates) {
     try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .update({
-          ...updates,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', userId)
-        .select()
-        .single();
-
-      if (error) throw error;
+      const { profilesApi } = require('./apiService');
+      const data = await profilesApi.update(userId, updates);
       return { data, error: null };
     } catch (error) {
       return { data: null, error };
@@ -171,15 +107,14 @@ export const authService = {
    */
   async isAdmin(userId) {
     try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('role')
-        .eq('id', userId)
-        .single();
-
-      if (error) throw error;
-      return { isAdmin: data?.role === 'admin', error: null };
+      const { profilesApi } = require('./apiService');
+      const response = await profilesApi.getById(userId);
+      // Le backend renvoie { data: { role: '...' } }
+      const role = response?.data?.role;
+      console.log(`authService.isAdmin check for ${userId}: role is ${role}`);
+      return { isAdmin: role === 'admin', error: null };
     } catch (error) {
+      console.error('authService.isAdmin error:', error);
       return { isAdmin: false, error };
     }
   },
@@ -189,14 +124,10 @@ export const authService = {
    */
   async getUserRole(userId) {
     try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('role')
-        .eq('id', userId)
-        .single();
-
-      if (error) throw error;
-      return { role: data?.role || 'user', error: null };
+      const { profilesApi } = require('./apiService');
+      const response = await profilesApi.getById(userId);
+      const role = response?.data?.role || 'user';
+      return { role, error: null };
     } catch (error) {
       return { role: null, error };
     }
@@ -206,13 +137,8 @@ export const authService = {
    * Demander une réinitialisation de mot de passe
    */
   async resetPassword(email) {
-    try {
-      const { data, error } = await supabase.auth.resetPasswordForEmail(email);
-      if (error) throw error;
-      return { data, error: null };
-    } catch (error) {
-      return { data: null, error };
-    }
+    // Non implémenté pour l'instant
+    return { data: null, error: { message: 'Non implémenté' } };
   },
 };
 

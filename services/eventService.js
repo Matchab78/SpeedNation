@@ -1,4 +1,4 @@
-import { supabase } from '../config/supabase';
+import { eventsApi } from './apiService';
 
 /**
  * Service pour gérer les événements
@@ -9,13 +9,7 @@ export const eventService = {
    */
   async getAllEvents() {
     try {
-      const { data, error } = await supabase
-        .from('events')
-        .select('*')
-        .order('is_featured', { ascending: false })
-        .order('event_date', { ascending: true });
-
-      if (error) throw error;
+      const { data } = await eventsApi.getAll();
       return { data, error: null };
     } catch (error) {
       return { data: null, error };
@@ -27,13 +21,7 @@ export const eventService = {
    */
   async getEventById(eventId) {
     try {
-      const { data, error } = await supabase
-        .from('events')
-        .select('*')
-        .eq('id', eventId)
-        .single();
-
-      if (error) throw error;
+      const { data } = await eventsApi.getById(eventId);
       return { data, error: null };
     } catch (error) {
       return { data: null, error };
@@ -45,42 +33,16 @@ export const eventService = {
    */
   async createEvent(creatorId, eventData) {
     try {
-      // Vérifier que l'utilisateur est administrateur
-      const { data: userData, error: userError } = await supabase
-        .from('profiles')
-        .select('role')
-        .eq('id', creatorId)
-        .single();
-
-      if (userError) throw userError;
-
-      if (userData?.role !== 'admin') {
-        return {
-          data: null,
-          error: {
-            message: 'Seuls les administrateurs peuvent créer des événements',
-            code: 'PERMISSION_DENIED',
-          },
-        };
-      }
-
-      // Créer l'événement
-      const { data, error } = await supabase
-        .from('events')
-        .insert({
-          creator_id: creatorId,
-          title: eventData.title,
-          description: eventData.description || null,
-          event_date: eventData.event_date,
-          event_time: eventData.event_time || null,
-          location: eventData.location,
-          image_url: eventData.image_url || null,
-          visibility: eventData.visibility || 'private',
-        })
-        .select()
-        .single();
-
-      if (error) throw error;
+      const { data } = await eventsApi.create({
+        creator_id: creatorId,
+        title: eventData.title,
+        description: eventData.description || null,
+        event_date: eventData.event_date,
+        event_time: eventData.event_time || null,
+        location: eventData.location,
+        image_url: eventData.image_url || null,
+        visibility: eventData.visibility || 'private',
+      });
       return { data, error: null };
     } catch (error) {
       return { data: null, error };
@@ -92,18 +54,7 @@ export const eventService = {
    */
   async updateEvent(eventId, creatorId, updates) {
     try {
-      const { data, error } = await supabase
-        .from('events')
-        .update({
-          ...updates,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', eventId)
-        .eq('creator_id', creatorId) // Sécurité
-        .select()
-        .single();
-
-      if (error) throw error;
+      const { data } = await eventsApi.update(eventId, updates);
       return { data, error: null };
     } catch (error) {
       return { data: null, error };
@@ -115,13 +66,7 @@ export const eventService = {
    */
   async deleteEvent(eventId, creatorId) {
     try {
-      const { error } = await supabase
-        .from('events')
-        .delete()
-        .eq('id', eventId)
-        .eq('creator_id', creatorId); // Sécurité
-
-      if (error) throw error;
+      await eventsApi.delete(eventId);
       return { error: null };
     } catch (error) {
       return { error };
@@ -133,17 +78,8 @@ export const eventService = {
    */
   async joinEvent(userId, eventId) {
     try {
-      const { data, error } = await supabase
-        .from('event_participants')
-        .insert({
-          user_id: userId,
-          event_id: eventId,
-        })
-        .select()
-        .single();
-
-      if (error) throw error;
-      return { data, error: null };
+      await eventsApi.join(eventId, userId);
+      return { error: null };
     } catch (error) {
       return { data: null, error };
     }
@@ -154,13 +90,7 @@ export const eventService = {
    */
   async leaveEvent(userId, eventId) {
     try {
-      const { error } = await supabase
-        .from('event_participants')
-        .delete()
-        .eq('user_id', userId)
-        .eq('event_id', eventId);
-
-      if (error) throw error;
+      await eventsApi.leave(eventId, userId);
       return { error: null };
     } catch (error) {
       return { error };
@@ -172,15 +102,9 @@ export const eventService = {
    */
   async isParticipating(userId, eventId) {
     try {
-      const { data, error } = await supabase
-        .from('event_participants')
-        .select('id')
-        .eq('user_id', userId)
-        .eq('event_id', eventId)
-        .single();
-
-      if (error && error.code !== 'PGRST116') throw error; // PGRST116 = no rows returned
-      return { isParticipating: !!data, error: null };
+      const { data } = await eventsApi.getById(eventId);
+      const isParticipating = data.participants?.some(p => p.user_id === userId) || false;
+      return { isParticipating, error: null };
     } catch (error) {
       return { isParticipating: false, error };
     }
@@ -191,12 +115,20 @@ export const eventService = {
    */
   async getEventParticipants(eventId) {
     try {
-      const { data, error } = await supabase
-        .from('event_participants')
-        .select('*, profiles(full_name, avatar_url)')
-        .eq('event_id', eventId);
+      const { data } = await eventsApi.getById(eventId);
+      return { data: data.participants || [], error: null };
+    } catch (error) {
+      return { data: null, error };
+    }
+  },
 
-      if (error) throw error;
+  /**
+   * Définir un événement comme mis en avant
+   */
+  async setFeaturedEvent(eventId) {
+    try {
+      const { adminApi } = require('./apiService');
+      const { data } = await adminApi.toggleEventFeature(eventId, true);
       return { data, error: null };
     } catch (error) {
       return { data: null, error };
@@ -204,30 +136,15 @@ export const eventService = {
   },
 
   /**
-   * Définir un événement comme mis en avant (unique)
-   */
-  async setFeaturedEvent(eventId) {
-    try {
-      const { error } = await supabase.rpc('set_featured_event', {
-        p_event_id: eventId,
-      });
-      if (error) throw error;
-      return { error: null };
-    } catch (error) {
-      return { error };
-    }
-  },
-
-  /**
    * Enlever toute mise en avant
    */
-  async clearFeaturedEvent() {
+  async clearFeaturedEvent(eventId) {
     try {
-      const { error } = await supabase.rpc('clear_featured_event');
-      if (error) throw error;
-      return { error: null };
+      const { adminApi } = require('./apiService');
+      const { data } = await adminApi.toggleEventFeature(eventId, false);
+      return { data, error: null };
     } catch (error) {
-      return { error };
+      return { data: null, error };
     }
   },
 };
