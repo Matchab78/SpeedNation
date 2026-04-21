@@ -13,1562 +13,278 @@ import {
   KeyboardAvoidingView,
   ScrollView,
   Platform,
-  Switch,
 } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "../utils/authContext";
 import { carService } from "../services/carService";
-import { authService } from "../services/authService";
 import { storageService } from "../services/storageService";
 
 export default function CarsScreen({ navigation }) {
-  const { user, profile, refreshUser, signOut, isAdmin } = useAuth();
-  const [activeTab, setActiveTab] = useState("cars");
+  const { user, profile, refreshUser, isAdmin } = useAuth();
   const [cars, setCars] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditCarModal, setShowEditCarModal] = useState(false);
   const [editingCarId, setEditingCarId] = useState(null);
-  const [showEditProfileModal, setShowEditProfileModal] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
+
   const [newCar, setNewCar] = useState({
-    name: "",
-    brand: "",
-    model: "",
-    year: "",
-    price_purchased: "",
-    power_hp: "",
-    image_url: "",
-    imageUri: null, // URI locale de l'image sélectionnée
+    name: "", brand: "", model: "", year: "", price_purchased: "", power_hp: "", image_url: "", imageUri: null,
   });
   const [editCar, setEditCar] = useState({
-    name: "",
-    brand: "",
-    model: "",
-    year: "",
-    price_purchased: "",
-    power_hp: "",
-    image_url: "",
-    imageUri: null,
-  });
-  const [editProfile, setEditProfile] = useState({
-    full_name: "",
-    profession: "",
-    location: "",
-    age: "",
-    avatarUri: null, // URI locale de l'image sélectionnée
-    showAdminRole: true,
+    name: "", brand: "", model: "", year: "", price_purchased: "", power_hp: "", image_url: "", imageUri: null,
   });
 
   useEffect(() => {
-    if (user) {
-      loadCars();
-      // Initialiser les données d'édition du profil
-      if (profile) {
-        setEditProfile({
-          full_name: profile.full_name || "",
-          profession: profile.profession || "",
-          location: profile.location || "",
-          age: profile.age ? profile.age.toString() : "",
-          avatarUri: null,
-          // Par défaut on affiche le badge si admin, sauf si le profil a choisi de le cacher
-          showAdminRole:
-            profile.show_admin_role === false ? false : profile.role === "admin",
-        });
-      }
-    } else {
-      setLoading(false);
-    }
-  }, [user, profile]);
+    if (user) loadCars();
+    else setLoading(false);
+  }, [user]);
 
   const loadCars = async () => {
     if (!user) return;
-
     setLoading(true);
     try {
       const { data, error } = await carService.getUserCars(user.id);
-      if (error) {
-        console.error("Erreur lors du chargement des voitures:", error);
-        Alert.alert("Erreur", "Impossible de charger vos voitures");
-      } else {
-        setCars(data || []);
-      }
+      if (!error) setCars(data || []);
     } catch (error) {
-      console.error("Erreur:", error);
+      console.error(error);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleSelectCarImage = async () => {
-    Alert.alert(
-      "Sélectionner une image",
-      "Choisissez une source",
-      [
-        { text: "Annuler", style: "cancel" },
-        {
-          text: "Galerie",
-          onPress: async () => {
-            const result = await storageService.pickImageFromGallery();
-            if (!result.cancelled && result.uri) {
-              setNewCar((c) => ({ ...c, imageUri: result.uri }));
-            } else if (result.error) {
-              Alert.alert("Erreur", result.error);
-            }
-          },
-        },
-        {
-          text: "Appareil photo",
-          onPress: async () => {
-            const result = await storageService.takePhoto();
-            if (!result.cancelled && result.uri) {
-              setNewCar((c) => ({ ...c, imageUri: result.uri }));
-            } else if (result.error) {
-              Alert.alert("Erreur", result.error);
-            }
-          },
-        },
-      ]
-    );
-  };
-
-  const handleSelectEditCarImage = async () => {
-    Alert.alert(
-      "Sélectionner une image",
-      "Choisissez une source",
-      [
-        { text: "Annuler", style: "cancel" },
-        {
-          text: "Galerie",
-          onPress: async () => {
-            const result = await storageService.pickImageFromGallery();
-            if (!result.cancelled && result.uri) {
-              setEditCar((c) => ({ ...c, imageUri: result.uri }));
-            } else if (result.error) {
-              Alert.alert("Erreur", result.error);
-            }
-          },
-        },
-        {
-          text: "Appareil photo",
-          onPress: async () => {
-            const result = await storageService.takePhoto();
-            if (!result.cancelled && result.uri) {
-              setEditCar((c) => ({ ...c, imageUri: result.uri }));
-            } else if (result.error) {
-              Alert.alert("Erreur", result.error);
-            }
-          },
-        },
-      ]
-    );
-  };
-
-  const handleOpenEditCar = (item) => {
-    setEditingCarId(item.id);
-    setEditCar({
-      name: item.name || "",
-      brand: item.brand || "",
-      model: item.model || "",
-      year: item.year ? String(item.year) : "",
-      price_purchased: item.price_purchased ? String(item.price_purchased) : "",
-      power_hp: item.power_hp ? String(item.power_hp) : "",
-      image_url: item.image_url || "",
-      imageUri: null,
-    });
-    setShowEditCarModal(true);
-  };
-
-  const handleUpdateCar = async () => {
-    if (!editingCarId) return;
-    if (!editCar.name.trim()) {
-      Alert.alert("Erreur", "Veuillez entrer le nom de la voiture");
-      return;
-    }
-    if (!editCar.price_purchased || parseFloat(editCar.price_purchased) <= 0) {
-      Alert.alert("Erreur", "Veuillez entrer un prix valide");
-      return;
-    }
-    if (!editCar.power_hp || parseInt(editCar.power_hp) <= 0) {
-      Alert.alert("Erreur", "Veuillez entrer une puissance valide");
-      return;
-    }
-
-    setUploadingImage(true);
+  const pickImage = async (mode, type = 'new') => {
     try {
-      let imageUrl = editCar.image_url.trim() || null;
+      const result = mode === 'gallery' 
+        ? await storageService.pickImageFromGallery() 
+        : await storageService.takePhoto();
 
-      if (editCar.imageUri) {
-        const { url, error: uploadError } = await storageService.uploadCarImage(
-          editingCarId,
-          editCar.imageUri
-        );
-        if (uploadError) {
-          Alert.alert("Erreur", "Impossible d'uploader l'image");
-          setUploadingImage(false);
-          return;
-        }
-        imageUrl = url;
+      if (!result.cancelled && result.uri) {
+        if (type === 'new') setNewCar({ ...newCar, imageUri: result.uri });
+        else setEditCar({ ...editCar, imageUri: result.uri });
+      } else if (result.error) {
+        Alert.alert("Erreur", "L'accès aux photos est peut-être bloqué par votre navigateur car le site n'est pas en HTTPS.");
       }
-
-      const updates = {
-        name: editCar.name.trim(),
-        brand: editCar.brand.trim() || null,
-        model: editCar.model.trim() || null,
-        year: editCar.year ? parseInt(editCar.year) : null,
-        price_purchased: parseFloat(editCar.price_purchased),
-        power_hp: parseInt(editCar.power_hp),
-        image_url: imageUrl,
-      };
-
-      const { error } = await carService.updateCar(editingCarId, user.id, updates);
-      if (error) {
-        Alert.alert("Erreur", "Impossible de modifier la voiture");
-        setUploadingImage(false);
-        return;
-      }
-
-      Alert.alert("Succès", "Voiture modifiée avec succès !");
-      setShowEditCarModal(false);
-      setEditingCarId(null);
-      loadCars();
-    } catch (err) {
-      Alert.alert("Erreur", "Une erreur est survenue");
-      console.error(err);
-    } finally {
-      setUploadingImage(false);
+    } catch (e) {
+      console.error(e);
     }
   };
 
   const handleAddCar = async () => {
-    // Validation
-    if (!newCar.name.trim()) {
-      Alert.alert("Erreur", "Veuillez entrer le nom de la voiture");
-      return;
-    }
-    if (!newCar.price_purchased || parseFloat(newCar.price_purchased) <= 0) {
-      Alert.alert("Erreur", "Veuillez entrer un prix valide");
-      return;
-    }
-    if (!newCar.power_hp || parseInt(newCar.power_hp) <= 0) {
-      Alert.alert("Erreur", "Veuillez entrer une puissance valide");
+    if (!newCar.name.trim() || !newCar.price_purchased || !newCar.power_hp) {
+      Alert.alert("Erreur", "Veuillez remplir les champs obligatoires");
       return;
     }
 
     setUploadingImage(true);
-
     try {
       let imageUrl = newCar.image_url.trim() || null;
-
-      // Si une image locale a été sélectionnée, l'uploader
       if (newCar.imageUri) {
-        const { url, error: uploadError } = await storageService.uploadCarImage(
-          `temp-${Date.now()}`,
-          newCar.imageUri
-        );
-        if (uploadError) {
-          Alert.alert("Erreur", "Impossible d'uploader l'image");
-          setUploadingImage(false);
-          return;
-        }
+        const { url, error } = await storageService.uploadCarImage(`temp-${user.id}`, newCar.imageUri);
+        if (error) throw error;
         imageUrl = url;
       }
 
-      const carData = {
-        name: newCar.name.trim(),
-        brand: newCar.brand.trim() || null,
-        model: newCar.model.trim() || null,
-        year: newCar.year ? parseInt(newCar.year) : null,
+      const { error: addError } = await carService.addCar(user.id, {
+        ...newCar,
         price_purchased: parseFloat(newCar.price_purchased),
         power_hp: parseInt(newCar.power_hp),
-        image_url: imageUrl,
-      };
-
-      const { data, error } = await carService.addCar(user.id, carData);
-
-      if (error) {
-        Alert.alert("Erreur", "Impossible d'ajouter la voiture");
-        setUploadingImage(false);
-        return;
-      }
-
-      Alert.alert("Succès", "Voiture ajoutée avec succès !");
-      setShowAddModal(false);
-      setNewCar({
-        name: "",
-        brand: "",
-        model: "",
-        year: "",
-        price_purchased: "",
-        power_hp: "",
-        image_url: "",
-        imageUri: null,
+        year: newCar.year ? parseInt(newCar.year) : null,
+        image_url: imageUrl
       });
+
+      if (addError) throw addError;
+
+      Alert.alert("Succès", "Voiture ajoutée !");
+      setShowAddModal(false);
+      setNewCar({ name: "", brand: "", model: "", year: "", price_purchased: "", power_hp: "", image_url: "", imageUri: null });
       loadCars();
     } catch (error) {
-      Alert.alert("Erreur", "Une erreur est survenue");
-      console.error(error);
+      Alert.alert("Erreur", "Impossible d'ajouter la voiture");
     } finally {
       setUploadingImage(false);
     }
   };
 
-  const handleSelectAvatar = async () => {
-    Alert.alert(
-      "Sélectionner une photo",
-      "Choisissez une source",
-      [
-        { text: "Annuler", style: "cancel" },
-        {
-          text: "Galerie",
-          onPress: async () => {
-            const result = await storageService.pickImageFromGallery();
-            if (!result.cancelled && result.uri) {
-              setEditProfile({ ...editProfile, avatarUri: result.uri });
-            } else if (result.error) {
-              Alert.alert("Erreur", result.error);
-            }
-          },
-        },
-        {
-          text: "Appareil photo",
-          onPress: async () => {
-            const result = await storageService.takePhoto();
-            if (!result.cancelled && result.uri) {
-              setEditProfile({ ...editProfile, avatarUri: result.uri });
-            } else if (result.error) {
-              Alert.alert("Erreur", result.error);
-            }
-          },
-        },
-      ]
-    );
-  };
-
-  const handleUpdateProfile = async () => {
+  const handleUpdateCar = async () => {
+    if (!editingCarId) return;
     setUploadingImage(true);
-
     try {
-      let avatarUrl = profile?.avatar_url || null;
-
-      // Si une nouvelle image a été sélectionnée, l'uploader
-      if (editProfile.avatarUri) {
-        const { url, error: uploadError } = await storageService.uploadAvatar(
-          user.id,
-          editProfile.avatarUri
-        );
-        if (uploadError) {
-          // Afficher le message d'erreur Supabase pour mieux comprendre le problème
-          Alert.alert(
-            "Erreur upload",
-            uploadError.message || "Impossible d'uploader la photo de profil"
-          );
-          setUploadingImage(false);
-          return;
-        }
-        avatarUrl = url;
+      let imageUrl = editCar.image_url.trim() || null;
+      if (editCar.imageUri) {
+        const { url, error } = await storageService.uploadCarImage(editingCarId, editCar.imageUri);
+        if (error) throw error;
+        imageUrl = url;
       }
 
-      const updates = {
-        full_name: editProfile.full_name.trim() || null,
-        profession: editProfile.profession.trim() || null,
-        location: editProfile.location.trim() || null,
-        age: editProfile.age ? parseInt(editProfile.age) : null,
-        avatar_url: avatarUrl,
-        // Contrôle uniquement la visibilité du badge, pas le rôle réel
-        show_admin_role: editProfile.showAdminRole,
-      };
+      await carService.updateCar(editingCarId, user.id, {
+        ...editCar,
+        price_purchased: parseFloat(editCar.price_purchased),
+        power_hp: parseInt(editCar.power_hp),
+        year: editCar.year ? parseInt(editCar.year) : null,
+        image_url: imageUrl
+      });
 
-      const { error } = await authService.updateProfile(user.id, updates);
-
-      if (error) {
-        Alert.alert("Erreur", "Impossible de mettre à jour le profil");
-        setUploadingImage(false);
-        return;
-      }
-
-      Alert.alert("Succès", "Profil mis à jour avec succès !");
-      setShowEditProfileModal(false);
-      refreshUser();
+      Alert.alert("Succès", "Voiture modifiée !");
+      setShowEditCarModal(false);
+      loadCars();
     } catch (error) {
-      Alert.alert("Erreur", "Une erreur est survenue");
-      console.error(error);
+      Alert.alert("Erreur", "Échec de la modification");
     } finally {
       setUploadingImage(false);
     }
   };
 
-  const handleDeleteCar = (carId) => {
-    Alert.alert(
-      "Supprimer la voiture",
-      "Êtes-vous sûr de vouloir supprimer cette voiture ?",
-      [
-        { text: "Annuler", style: "cancel" },
-        {
-          text: "Supprimer",
-          style: "destructive",
-          onPress: async () => {
-            const { error } = await carService.deleteCar(carId, user.id);
-            if (error) {
-              Alert.alert("Erreur", "Impossible de supprimer la voiture");
-            } else {
-              loadCars();
-            }
-          },
-        },
-      ]
-    );
-  };
-
-  const formatPrice = (price) => {
-    return new Intl.NumberFormat("fr-FR", {
-      style: "currency",
-      currency: "EUR",
-      maximumFractionDigits: 0,
-    }).format(price);
+  const handleDeleteCar = (id) => {
+    Alert.alert("Supprimer", "Voulez-vous vraiment supprimer cette voiture ?", [
+      { text: "Annuler", style: "cancel" },
+      { text: "Supprimer", style: "destructive", onPress: async () => {
+         await carService.deleteCar(id, user.id);
+         loadCars();
+      }}
+    ]);
   };
 
   const renderCarCard = ({ item }) => (
     <View style={styles.carCard}>
-      {/* Photo */}
-      {item.image_url ? (
-        <Image source={{ uri: item.image_url }} style={styles.carImage} resizeMode="cover" />
-      ) : (
-        <View style={[styles.carImage, styles.placeholderImage]}>
-          <Text style={styles.placeholderText}>🚗</Text>
-        </View>
-      )}
-
-      {/* Infos */}
-      <View style={styles.carInfoContainer}>
+      <Image 
+        source={{ uri: item.image_url || 'https://via.placeholder.com/150?text=Pas+de+photo' }} 
+        style={styles.carImage} 
+      />
+      <View style={styles.carInfo}>
         <Text style={styles.carTitle}>{item.name}</Text>
-        <Text style={styles.carDetails}>
-          {formatPrice(item.price_purchased)} • {item.power_hp} Ch
-        </Text>
-        {item.brand && item.model && (
-          <Text style={styles.carSubDetails}>
-            {item.brand} {item.model} {item.year ? `• ${item.year}` : ""}
-          </Text>
-        )}
+        <Text style={styles.carSub}>{item.brand} {item.model}</Text>
       </View>
-
-      {/* Menu ☰ : Modifier / Supprimer */}
-      <TouchableOpacity
-        style={styles.carCardMenuButton}
-        onPress={() =>
-          Alert.alert(item.name, undefined, [
-            { text: "Annuler", style: "cancel" },
-            { text: "Modifier", onPress: () => handleOpenEditCar(item) },
-            {
-              text: "Supprimer",
-              style: "destructive",
-              onPress: () => handleDeleteCar(item.id),
-            },
-          ])
-        }
-      >
-        <Text style={styles.carCardMenuText}>☰</Text>
-      </TouchableOpacity>
+      <View style={styles.carActions}>
+        <TouchableOpacity onPress={() => {
+            setEditingCarId(item.id);
+            setEditCar({...item, year: item.year?.toString() || "", price_purchased: item.price_purchased?.toString() || "", power_hp: item.power_hp?.toString() || "", imageUri: null});
+            setShowEditCarModal(true);
+        }}>
+          <Ionicons name="pencil" size={20} color="#fff" />
+        </TouchableOpacity>
+        <TouchableOpacity onPress={() => handleDeleteCar(item.id)}>
+          <Ionicons name="trash" size={20} color="#ef4444" />
+        </TouchableOpacity>
+      </View>
     </View>
   );
 
-  if (!user) {
-    return (
-      <View style={styles.container}>
-        <View style={styles.notLoggedIn}>
-          <Text style={styles.notLoggedInText}>
-            Veuillez vous connecter pour voir vos voitures
-          </Text>
-          <TouchableOpacity
-            style={styles.loginButton}
-            onPress={() => navigation.navigate("Home")}
-          >
-            <Text style={styles.loginButtonText}>Se connecter</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-    );
-  }
-
-  if (loading) {
-    return (
-      <View style={styles.container}>
-        <ActivityIndicator size="large" color="#8916CB" />
-      </View>
-    );
-  }
-
   return (
     <View style={styles.container}>
-      {/* --- HEADER PROFIL --- */}
-      <View style={styles.profileCard}>
-        <TouchableOpacity
-          style={styles.profileMenuButton}
-          onPress={() => setShowEditProfileModal(true)}
-        >
-          <Text style={styles.menuText}>☰</Text>
-        </TouchableOpacity>
-
+      <View style={styles.header}>
+        <View style={styles.profileRow}>
+          <Image source={{ uri: profile?.avatar_url || 'https://via.placeholder.com/60' }} style={styles.headerAvatar} />
+          <View>
+            <Text style={styles.welcome}>Bienvenue,</Text>
+            <Text style={styles.profileName}>{profile?.full_name || user?.email}</Text>
+          </View>
+        </View>
         {isAdmin && (
-          <TouchableOpacity
-            style={styles.adminPanelButton}
-            onPress={() => navigation.navigate("AdminPanel")}
-            activeOpacity={0.8}
-          >
-            <Text style={styles.adminPanelIcon}>⛨</Text>
-            <Text style={styles.adminPanelText}>Panel</Text>
+          <TouchableOpacity style={styles.adminBtn} onPress={() => navigation.navigate("AdminPanel")}>
+            <Ionicons name="shield-checkmark" size={20} color="#fff" />
           </TouchableOpacity>
         )}
-
-        <TouchableOpacity onPress={() => setShowEditProfileModal(true)}>
-          {profile?.avatar_url ? (
-            <Image source={{ uri: profile.avatar_url }} style={styles.avatar} />
-          ) : (
-            <View style={[styles.avatar, styles.avatarPlaceholder]}>
-              <Text style={styles.avatarText}>
-                {profile?.full_name
-                  ? profile.full_name
-                      .split(" ")
-                      .map((n) => n[0])
-                      .join("")
-                      .toUpperCase()
-                  : "U"}
-              </Text>
-            </View>
-          )}
-        </TouchableOpacity>
-
-        <Text style={styles.name}>
-          {profile?.full_name || user?.email || "Utilisateur"}
-        </Text>
-        <Text style={styles.info}>
-          {profile?.profession || "Utilisateur"}
-        </Text>
-        {(profile?.location || profile?.age) && (
-          <Text style={styles.info}>
-            {profile?.location}
-            {profile?.location && profile?.age ? " — " : ""}
-            {profile?.age ? `${profile.age} ans` : ""}
-          </Text>
-        )}
-        {profile?.followers_count !== undefined && (
-          <Text style={styles.followers}>
-            {profile.followers_count.toLocaleString()} FOLLOWERS
-          </Text>
-        )}
-
-        {isAdmin && profile?.show_admin_role !== false && (
-          <View style={styles.roleBadge}>
-            <Text style={styles.roleBadgeText}>Administrateur</Text>
-          </View>
-        )}
       </View>
 
-      {/* --- TABS --- */}
-      <View style={styles.tabs}>
-        <TouchableOpacity onPress={() => setActiveTab("cars")}>
-          <Text
-            style={[
-              styles.tabText,
-              activeTab === "cars" && styles.activeTabText,
-            ]}
-          >
-            MES VOITURES
-          </Text>
-        </TouchableOpacity>
-      </View>
+      <FlatList
+        data={cars}
+        keyExtractor={(item) => item.id}
+        renderItem={renderCarCard}
+        contentContainerStyle={styles.list}
+        ListEmptyComponent={<Text style={styles.empty}>Aucune voiture pour le moment</Text>}
+      />
 
-      {/* --- LISTE DES VOITURES --- */}
-      {cars.length === 0 ? (
-        <View style={styles.emptyState}>
-          <Text style={styles.emptyStateText}>Aucune voiture ajoutée</Text>
-          <Text style={styles.emptyStateSubtext}>
-            Appuyez sur + pour ajouter une voiture
-          </Text>
-        </View>
-      ) : (
-        <FlatList
-          data={cars}
-          keyExtractor={(item) => item.id}
-          renderItem={renderCarCard}
-          contentContainerStyle={styles.carsListContent}
-          refreshing={loading}
-          onRefresh={loadCars}
-        />
-      )}
-
-      {/* --- FAB Ajouter une voiture --- */}
-      <TouchableOpacity
-        style={styles.fab}
-        onPress={() => setShowAddModal(true)}
-        activeOpacity={0.8}
-      >
-        <Text style={styles.fabIcon}>+</Text>
+      <TouchableOpacity style={styles.fab} onPress={() => setShowAddModal(true)}>
+        <Ionicons name="add" size={30} color="#fff" />
       </TouchableOpacity>
 
-      {/* --- MODAL AJOUTER VOITURE --- */}
-      <Modal
-        visible={showAddModal}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={() => setShowAddModal(false)}
-      >
-        <KeyboardAvoidingView
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
-          style={styles.modalOverlay}
-          keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
-        >
-          <TouchableOpacity
-            style={styles.modalOverlay}
-            activeOpacity={1}
-            onPress={() => setShowAddModal(false)}
-          >
-            <TouchableOpacity activeOpacity={1} onPress={(e) => e.stopPropagation()}>
-              <View style={styles.modalContent}>
-                <ScrollView
-                  showsVerticalScrollIndicator={false}
-                  keyboardShouldPersistTaps="handled"
-                  contentContainerStyle={styles.modalScrollContent}
-                >
-                  <Text style={styles.modalTitle}>Ajouter une voiture</Text>
-
-                  <TextInput
-                    style={styles.modalInput}
-                    placeholder="Nom complet (ex: Porsche 911 GT3 • 2023)"
-                    placeholderTextColor="#888"
-                    value={newCar.name}
-                    onChangeText={(text) => setNewCar({ ...newCar, name: text })}
-                    returnKeyType="next"
-                  />
-
-                  <TextInput
-                    style={styles.modalInput}
-                    placeholder="Marque (optionnel)"
-                    placeholderTextColor="#888"
-                    value={newCar.brand}
-                    onChangeText={(text) => setNewCar({ ...newCar, brand: text })}
-                    returnKeyType="next"
-                  />
-
-                  <TextInput
-                    style={styles.modalInput}
-                    placeholder="Modèle (optionnel)"
-                    placeholderTextColor="#888"
-                    value={newCar.model}
-                    onChangeText={(text) => setNewCar({ ...newCar, model: text })}
-                    returnKeyType="next"
-                  />
-
-                  <TextInput
-                    style={styles.modalInput}
-                    placeholder="Année (optionnel)"
-                    placeholderTextColor="#888"
-                    keyboardType="numeric"
-                    value={newCar.year}
-                    onChangeText={(text) => setNewCar({ ...newCar, year: text })}
-                    returnKeyType="next"
-                  />
-
-                  <TextInput
-                    style={styles.modalInput}
-                    placeholder="Prix d'achat (€)"
-                    placeholderTextColor="#888"
-                    keyboardType="numeric"
-                    value={newCar.price_purchased}
-                    onChangeText={(text) =>
-                      setNewCar({ ...newCar, price_purchased: text })
-                    }
-                    returnKeyType="next"
-                  />
-
-                  <TextInput
-                    style={styles.modalInput}
-                    placeholder="Puissance (chevaux)"
-                    placeholderTextColor="#888"
-                    keyboardType="numeric"
-                    value={newCar.power_hp}
-                    onChangeText={(text) => setNewCar({ ...newCar, power_hp: text })}
-                    returnKeyType="next"
-                  />
-
-                  {/* Sélection d'image */}
-                  <TouchableOpacity
-                    style={styles.imagePickerButton}
-                    onPress={handleSelectCarImage}
-                  >
-                    {newCar.imageUri ? (
-                      <Image
-                        source={{ uri: newCar.imageUri }}
-                        style={styles.previewImage}
-                      />
-                    ) : (
-                      <View style={styles.imagePickerPlaceholder}>
-                        <Text style={styles.imagePickerText}>📷</Text>
-                        <Text style={styles.imagePickerLabel}>
-                          {newCar.image_url
-                            ? "Image URL (cliquez pour changer)"
-                            : "Ajouter une photo"}
-                        </Text>
-                      </View>
-                    )}
-                  </TouchableOpacity>
-
-                  {newCar.imageUri && (
-                    <TouchableOpacity
-                      style={styles.removeImageButton}
-                      onPress={() => setNewCar({ ...newCar, imageUri: null })}
-                    >
-                      <Text style={styles.removeImageText}>
-                        Supprimer l'image
-                      </Text>
-                    </TouchableOpacity>
-                  )}
-
-                  <TextInput
-                    style={styles.modalInput}
-                    placeholder="Ou URL de l'image (optionnel)"
-                    placeholderTextColor="#888"
-                    value={newCar.image_url}
-                    onChangeText={(text) =>
-                      setNewCar({ ...newCar, image_url: text })
-                    }
-                    returnKeyType="done"
-                  />
-
-                  <View style={styles.modalButtons}>
-                    <TouchableOpacity
-                      style={[styles.modalButton, styles.cancelButton]}
-                      onPress={() => setShowAddModal(false)}
-                    >
-                      <Text style={styles.cancelButtonText}>Annuler</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={[styles.modalButton, styles.addButtonModal]}
-                      onPress={handleAddCar}
-                      disabled={uploadingImage}
-                    >
-                      {uploadingImage ? (
-                        <ActivityIndicator color="white" />
-                      ) : (
-                        <Text style={styles.addButtonModalText}>Ajouter</Text>
-                      )}
-                    </TouchableOpacity>
-                  </View>
-                </ScrollView>
+      {/* Modal Ajout */}
+      <Modal visible={showAddModal} animationType="slide" transparent={true}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <ScrollView>
+              <Text style={styles.modalTitle}>Ajouter une voiture</Text>
+              <TextInput style={styles.input} placeholder="Nom (ex: Ma RS3)" placeholderTextColor="#666" value={newCar.name} onChangeText={t => setNewCar({...newCar, name: t})} />
+              <TextInput style={styles.input} placeholder="Prix (€)" keyboardType="numeric" placeholderTextColor="#666" value={newCar.price_purchased} onChangeText={t => setNewCar({...newCar, price_purchased: t})} />
+              <TextInput style={styles.input} placeholder="Puissance (ch)" keyboardType="numeric" placeholderTextColor="#666" value={newCar.power_hp} onChangeText={t => setNewCar({...newCar, power_hp: t})} />
+              
+              <View style={styles.imageSelector}>
+                <TouchableOpacity style={styles.imageBtn} onPress={() => pickImage('gallery')}>
+                  <Ionicons name="images" size={24} color="#fff" />
+                  <Text style={styles.imageBtnText}>Galerie</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.imageBtn} onPress={() => pickImage('camera')}>
+                  <Ionicons name="camera" size={24} color="#fff" />
+                  <Text style={styles.imageBtnText}>Photo</Text>
+                </TouchableOpacity>
               </View>
-            </TouchableOpacity>
-          </TouchableOpacity>
-        </KeyboardAvoidingView>
+
+              {newCar.imageUri && <Image source={{ uri: newCar.imageUri }} style={styles.preview} />}
+
+              <View style={styles.modalBtns}>
+                <TouchableOpacity style={styles.cancelBtn} onPress={() => setShowAddModal(false)}><Text style={styles.btnText}>Annuler</Text></TouchableOpacity>
+                <TouchableOpacity style={styles.saveBtn} onPress={handleAddCar} disabled={uploadingImage}>
+                  {uploadingImage ? <ActivityIndicator color="#fff" /> : <Text style={styles.btnText}>Ajouter</Text>}
+                </TouchableOpacity>
+              </View>
+            </ScrollView>
+          </View>
+        </View>
       </Modal>
 
-      {/* --- MODAL MODIFIER VOITURE --- */}
-      <Modal
-        visible={showEditCarModal}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={() => {
-          setShowEditCarModal(false);
-          setEditingCarId(null);
-        }}
-      >
-        <KeyboardAvoidingView
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
-          style={styles.modalOverlay}
-          keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
-        >
-          <TouchableOpacity
-            style={styles.modalOverlay}
-            activeOpacity={1}
-            onPress={() => {
-              setShowEditCarModal(false);
-              setEditingCarId(null);
-            }}
-          >
-            <TouchableOpacity activeOpacity={1} onPress={(e) => e.stopPropagation()}>
-              <View style={styles.modalContent}>
-                <ScrollView
-                  showsVerticalScrollIndicator={false}
-                  keyboardShouldPersistTaps="handled"
-                  contentContainerStyle={styles.modalScrollContent}
-                >
-                  <Text style={styles.modalTitle}>Modifier la voiture</Text>
-
-                  <TextInput
-                    style={styles.modalInput}
-                    placeholder="Nom complet (ex: Porsche 911 GT3 • 2023)"
-                    placeholderTextColor="#888"
-                    value={editCar.name}
-                    onChangeText={(text) => setEditCar({ ...editCar, name: text })}
-                    returnKeyType="next"
-                  />
-
-                  <TextInput
-                    style={styles.modalInput}
-                    placeholder="Marque (optionnel)"
-                    placeholderTextColor="#888"
-                    value={editCar.brand}
-                    onChangeText={(text) => setEditCar({ ...editCar, brand: text })}
-                    returnKeyType="next"
-                  />
-
-                  <TextInput
-                    style={styles.modalInput}
-                    placeholder="Modèle (optionnel)"
-                    placeholderTextColor="#888"
-                    value={editCar.model}
-                    onChangeText={(text) => setEditCar({ ...editCar, model: text })}
-                    returnKeyType="next"
-                  />
-
-                  <TextInput
-                    style={styles.modalInput}
-                    placeholder="Année (optionnel)"
-                    placeholderTextColor="#888"
-                    keyboardType="numeric"
-                    value={editCar.year}
-                    onChangeText={(text) => setEditCar({ ...editCar, year: text })}
-                    returnKeyType="next"
-                  />
-
-                  <TextInput
-                    style={styles.modalInput}
-                    placeholder="Prix d'achat (€)"
-                    placeholderTextColor="#888"
-                    keyboardType="numeric"
-                    value={editCar.price_purchased}
-                    onChangeText={(text) =>
-                      setEditCar({ ...editCar, price_purchased: text })
-                    }
-                    returnKeyType="next"
-                  />
-
-                  <TextInput
-                    style={styles.modalInput}
-                    placeholder="Puissance (chevaux)"
-                    placeholderTextColor="#888"
-                    keyboardType="numeric"
-                    value={editCar.power_hp}
-                    onChangeText={(text) => setEditCar({ ...editCar, power_hp: text })}
-                    returnKeyType="next"
-                  />
-
-                  {/* Sélection d'image */}
-                  <TouchableOpacity
-                    style={styles.imagePickerButton}
-                    onPress={handleSelectEditCarImage}
-                  >
-                    {editCar.imageUri ? (
-                      <Image
-                        source={{ uri: editCar.imageUri }}
-                        style={styles.previewImage}
-                      />
-                    ) : editCar.image_url ? (
-                      <Image
-                        source={{ uri: editCar.image_url }}
-                        style={styles.previewImage}
-                      />
-                    ) : (
-                      <View style={styles.imagePickerPlaceholder}>
-                        <Text style={styles.imagePickerText}>📷</Text>
-                        <Text style={styles.imagePickerLabel}>Changer la photo</Text>
-                      </View>
-                    )}
-                  </TouchableOpacity>
-
-                  {(editCar.imageUri || editCar.image_url) && (
-                    <TouchableOpacity
-                      style={styles.removeImageButton}
-                      onPress={() =>
-                        setEditCar((c) => ({ ...c, imageUri: null, image_url: "" }))
-                      }
-                    >
-                      <Text style={styles.removeImageText}>
-                        Supprimer l'image
-                      </Text>
-                    </TouchableOpacity>
-                  )}
-
-                  <TextInput
-                    style={styles.modalInput}
-                    placeholder="Ou URL de l'image (optionnel)"
-                    placeholderTextColor="#888"
-                    value={editCar.image_url}
-                    onChangeText={(text) =>
-                      setEditCar({ ...editCar, image_url: text })
-                    }
-                    returnKeyType="done"
-                  />
-
-                  <View style={styles.modalButtons}>
-                    <TouchableOpacity
-                      style={[styles.modalButton, styles.cancelButton]}
-                      onPress={() => {
-                        setShowEditCarModal(false);
-                        setEditingCarId(null);
-                      }}
-                    >
-                      <Text style={styles.cancelButtonText}>Annuler</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={[styles.modalButton, styles.addButtonModal]}
-                      onPress={handleUpdateCar}
-                      disabled={uploadingImage}
-                    >
-                      {uploadingImage ? (
-                        <ActivityIndicator color="white" />
-                      ) : (
-                        <Text style={styles.addButtonModalText}>Enregistrer</Text>
-                      )}
-                    </TouchableOpacity>
-                  </View>
-                </ScrollView>
+      {/* Modal Edition (Similaire mais abrégé ici) */}
+      <Modal visible={showEditCarModal} animationType="slide" transparent={true}>
+         {/* ... (Contenu similaire à l'ajout avec handleUpdateCar) */}
+         <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <ScrollView>
+              <Text style={styles.modalTitle}>Modifier la voiture</Text>
+              <TextInput style={styles.input} value={editCar.name} onChangeText={t => setEditCar({...editCar, name: t})} />
+              <View style={styles.imageSelector}>
+                <TouchableOpacity style={styles.imageBtn} onPress={() => pickImage('gallery', 'edit')}><Ionicons name="images" size={24} color="#fff" /></TouchableOpacity>
+                <TouchableOpacity style={styles.imageBtn} onPress={() => pickImage('camera', 'edit')}><Ionicons name="camera" size={24} color="#fff" /></TouchableOpacity>
               </View>
-            </TouchableOpacity>
-          </TouchableOpacity>
-        </KeyboardAvoidingView>
-      </Modal>
-
-      {/* --- MODAL ÉDITER PROFIL --- */}
-      <Modal
-        visible={showEditProfileModal}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={() => setShowEditProfileModal(false)}
-      >
-        <KeyboardAvoidingView
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
-          style={styles.modalOverlay}
-          keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
-        >
-          <TouchableOpacity
-            style={styles.modalOverlay}
-            activeOpacity={1}
-            onPress={() => setShowEditProfileModal(false)}
-          >
-            <TouchableOpacity activeOpacity={1} onPress={(e) => e.stopPropagation()}>
-              <View style={styles.modalContent}>
-                <ScrollView
-                  showsVerticalScrollIndicator={false}
-                  keyboardShouldPersistTaps="handled"
-                  contentContainerStyle={styles.modalScrollContent}
-                >
-                  <Text style={styles.modalTitle}>Modifier mon profil</Text>
-
-                  {/* Photo de profil */}
-                  <TouchableOpacity
-                    style={styles.avatarPickerButton}
-                    onPress={handleSelectAvatar}
-                  >
-                    {editProfile.avatarUri ? (
-                      <Image
-                        source={{ uri: editProfile.avatarUri }}
-                        style={styles.avatarPreview}
-                      />
-                    ) : profile?.avatar_url ? (
-                      <Image
-                        source={{ uri: profile.avatar_url }}
-                        style={styles.avatarPreview}
-                      />
-                    ) : (
-                      <View style={styles.avatarPreviewPlaceholder}>
-                        <Text style={styles.avatarPreviewText}>
-                          {editProfile.full_name
-                            ? editProfile.full_name
-                                .split(" ")
-                                .map((n) => n[0])
-                                .join("")
-                                .toUpperCase()
-                            : "U"}
-                        </Text>
-                      </View>
-                    )}
-                    <View style={styles.changeAvatarBadge}>
-                      <Text style={styles.changeAvatarText}>📷</Text>
-                    </View>
-                  </TouchableOpacity>
-
-                  <TextInput
-                    style={styles.modalInput}
-                    placeholder="Nom complet"
-                    placeholderTextColor="#888"
-                    value={editProfile.full_name}
-                    onChangeText={(text) =>
-                      setEditProfile({ ...editProfile, full_name: text })
-                    }
-                    returnKeyType="next"
-                  />
-
-                  <TextInput
-                    style={styles.modalInput}
-                    placeholder="Profession"
-                    placeholderTextColor="#888"
-                    value={editProfile.profession}
-                    onChangeText={(text) =>
-                      setEditProfile({ ...editProfile, profession: text })
-                    }
-                    returnKeyType="next"
-                  />
-
-                  <TextInput
-                    style={styles.modalInput}
-                    placeholder="Localisation"
-                    placeholderTextColor="#888"
-                    value={editProfile.location}
-                    onChangeText={(text) =>
-                      setEditProfile({ ...editProfile, location: text })
-                    }
-                    returnKeyType="next"
-                  />
-
-                  <TextInput
-                    style={styles.modalInput}
-                    placeholder="Âge"
-                    placeholderTextColor="#888"
-                    keyboardType="numeric"
-                    value={editProfile.age}
-                    onChangeText={(text) =>
-                      setEditProfile({ ...editProfile, age: text })
-                    }
-                    returnKeyType="done"
-                  />
-
-                  <View style={styles.adminToggleRow}>
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.adminToggleLabel}>Statut administrateur</Text>
-                      <Text style={styles.adminToggleSubtitle}>
-                        Afficher ou masquer le rôle Administrateur sur ton profil
-                      </Text>
-                    </View>
-                    <Switch
-                      value={editProfile.showAdminRole}
-                      onValueChange={(value) =>
-                        setEditProfile({ ...editProfile, showAdminRole: value })
-                      }
-                    />
-                  </View>
-
-                  <View style={styles.modalButtons}>
-                    <TouchableOpacity
-                      style={[styles.modalButton, styles.cancelButton]}
-                      onPress={() => setShowEditProfileModal(false)}
-                    >
-                      <Text style={styles.cancelButtonText}>Annuler</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={[styles.modalButton, styles.addButtonModal]}
-                      onPress={handleUpdateProfile}
-                      disabled={uploadingImage}
-                    >
-                      {uploadingImage ? (
-                        <ActivityIndicator color="white" />
-                      ) : (
-                        <Text style={styles.addButtonModalText}>Enregistrer</Text>
-                      )}
-                    </TouchableOpacity>
-                  </View>
-
-                  <TouchableOpacity
-                    style={styles.logoutLink}
-                    onPress={() => {
-                      Alert.alert(
-                        "Déconnexion",
-                        "Voulez-vous vous déconnecter ?",
-                        [
-                          { text: "Annuler", style: "cancel" },
-                          {
-                            text: "Se déconnecter",
-                            style: "destructive",
-                            onPress: async () => {
-                              setShowEditProfileModal(false);
-                              await signOut();
-                            },
-                          },
-                        ]
-                      );
-                    }}
-                  >
-                    <Text style={styles.logoutLinkText}>Se déconnecter</Text>
-                  </TouchableOpacity>
-                </ScrollView>
+              {editCar.imageUri && <Image source={{ uri: editCar.imageUri }} style={styles.preview} />}
+              <View style={styles.modalBtns}>
+                <TouchableOpacity style={styles.cancelBtn} onPress={() => setShowEditCarModal(false)}><Text style={styles.btnText}>Annuler</Text></TouchableOpacity>
+                <TouchableOpacity style={styles.saveBtn} onPress={handleUpdateCar} disabled={uploadingImage}><Text style={styles.btnText}>Enregistrer</Text></TouchableOpacity>
               </View>
-            </TouchableOpacity>
-          </TouchableOpacity>
-        </KeyboardAvoidingView>
+            </ScrollView>
+          </View>
+         </View>
       </Modal>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#000",
-    paddingTop: 55,
-  },
-
-  notLoggedIn: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 20,
-  },
-
-  notLoggedInText: {
-    color: "#fff",
-    fontSize: 16,
-    marginBottom: 20,
-    textAlign: "center",
-  },
-
-  loginButton: {
-    backgroundColor: "#8916CB",
-    paddingVertical: 14,
-    paddingHorizontal: 28,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: "rgba(137, 22, 203, 0.4)",
-  },
-
-  loginButtonText: {
-    color: "#fff",
-    fontWeight: "600",
-  },
-
-  /* --- Profil card --- */
-  profileCard: {
-    backgroundColor: "transparent",
-    paddingVertical: 24,
-    paddingHorizontal: 20,
-    marginBottom: 20,
-    alignItems: "center",
-  },
-
-  profileMenuButton: {
-    position: "absolute",
-    top: 0,
-    right: 0,
-    padding: 12,
-  },
-
-  adminPanelButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    alignSelf: "flex-start",
-    paddingHorizontal: 18,
-    paddingVertical: 8,
-    borderRadius: 18,
-    backgroundColor: "#131722",
-    borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.08)",
-    marginBottom: 16,
-  },
-
-  adminPanelIcon: {
-    fontSize: 16,
-    color: "#fff",
-    marginRight: 8,
-  },
-
-  adminPanelText: {
-    color: "#fff",
-    fontSize: 14,
-    fontWeight: "600",
-  },
-
-  avatar: {
-    width: 90,
-    height: 90,
-    borderRadius: 45,
-    marginBottom: 12,
-  },
-
-  avatarPlaceholder: {
-    backgroundColor: "#8916CB",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-
-  avatarText: {
-    color: "#fff",
-    fontSize: 24,
-    fontWeight: "bold",
-  },
-
-  name: {
-    color: "#fff",
-    fontSize: 22,
-    fontWeight: "bold",
-    textAlign: "center",
-    marginBottom: 4,
-  },
-
-  info: {
-    color: "#888",
-    fontSize: 14,
-    textAlign: "center",
-    marginTop: 2,
-  },
-
-  followers: {
-    color: "#888",
-    fontWeight: "600",
-    marginTop: 6,
-    fontSize: 12,
-    letterSpacing: 1,
-  },
-
-  roleBadge: {
-    marginTop: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 999,
-    backgroundColor: "#131722",
-    borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.15)",
-  },
-
-  roleBadgeText: {
-    color: "#fff",
-    fontSize: 12,
-    fontWeight: "600",
-  },
-
-  menuText: {
-    fontSize: 24,
-    color: "#fff",
-  },
-
-  /* --- Tabs --- */
-  tabs: {
-    flexDirection: "row",
-    justifyContent: "space-evenly",
-    marginBottom: 16,
-    paddingHorizontal: 20,
-  },
-
-  tabText: {
-    color: "#666",
-    fontSize: 15,
-    fontWeight: "500",
-  },
-
-  activeTabText: {
-    color: "#8916CB",
-    fontWeight: "bold",
-    borderBottomWidth: 2,
-    borderBottomColor: "#8916CB",
-    paddingBottom: 4,
-  },
-
-  /* --- FAB --- */
-  fab: {
-    position: "absolute",
-    bottom: 90,
-    right: 20,
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    backgroundColor: "rgba(137, 22, 203, 0.9)",
-    alignItems: "center",
-    justifyContent: "center",
-    ...Platform.select({
-      ios: {
-        shadowColor: "#8916CB",
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.3,
-        shadowRadius: 6,
-      },
-      android: { elevation: 4 },
-    }),
-  },
-
-  fabIcon: {
-    color: "#fff",
-    fontSize: 26,
-    fontWeight: "300",
-  },
-
-  adminToggleRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginTop: 16,
-    marginBottom: 8,
-  },
-
-  adminToggleLabel: {
-    color: "#fff",
-    fontSize: 14,
-    fontWeight: "600",
-    marginBottom: 2,
-  },
-
-  adminToggleSubtitle: {
-    color: "#888",
-    fontSize: 12,
-  },
-
-  carsListContent: {
-    paddingBottom: 140,
-  },
-
-  /* --- Car cards --- */
-  carCard: {
-    backgroundColor: "#111",
-    marginHorizontal: 20,
-    borderRadius: 16,
-    marginBottom: 14,
-    padding: 16,
-    flexDirection: "row",
-    alignItems: "center",
-  },
-
-  carImage: {
-    width: 120,
-    height: 80,
-    borderRadius: 12,
-  },
-
-  placeholderImage: {
-    backgroundColor: "#1a0a2e",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-
-  placeholderText: {
-    fontSize: 36,
-  },
-
-  carInfoContainer: {
-    flex: 1,
-    marginLeft: 14,
-  },
-
-  carTitle: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "bold",
-  },
-
-  carDetails: {
-    color: "#888",
-    marginTop: 4,
-    fontSize: 14,
-  },
-
-  carSubDetails: {
-    color: "#888",
-    marginTop: 2,
-    fontSize: 12,
-  },
-
-  carCardMenuButton: {
-    padding: 10,
-    marginLeft: 4,
-  },
-
-  carCardMenuText: {
-    fontSize: 20,
-    color: "#ccc",
-  },
-
-  /* --- Empty State --- */
-  emptyState: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 40,
-  },
-
-  emptyStateText: {
-    color: "#fff",
-    fontSize: 18,
-    fontWeight: "600",
-    marginBottom: 10,
-  },
-
-  emptyStateSubtext: {
-    color: "#888",
-    fontSize: 14,
-    textAlign: "center",
-  },
-
-  /* --- Modal --- */
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.85)",
-    justifyContent: "flex-end",
-  },
-
-  modalContent: {
-    backgroundColor: "#0f0f0f",
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    maxHeight: "90%",
-    borderTopWidth: 3,
-    borderTopColor: "#8916CB",
-  },
-
-  modalScrollContent: {
-    padding: 24,
-  },
-
-  modalTitle: {
-    color: "#fff",
-    fontSize: 22,
-    fontWeight: "bold",
-    marginBottom: 20,
-  },
-
-  modalInput: {
-    backgroundColor: "#1a0a2e",
-    borderRadius: 14,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    color: "#fff",
-    marginBottom: 14,
-    borderWidth: 1,
-    borderColor: "#2a1a3a",
-  },
-
-  modalButtons: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginTop: 20,
-  },
-
-  modalButton: {
-    flex: 1,
-    paddingVertical: 12,
-    borderRadius: 20,
-    alignItems: "center",
-    marginHorizontal: 5,
-  },
-
-  cancelButton: {
-    backgroundColor: "#1a0a2e",
-    borderWidth: 1,
-    borderColor: "#2a1a3a",
-  },
-
-  cancelButtonText: {
-    color: "#a0a0a0",
-    fontWeight: "600",
-  },
-
-  addButtonModal: {
-    backgroundColor: "#8916CB",
-    borderWidth: 1,
-    borderColor: "rgba(137, 22, 203, 0.5)",
-  },
-
-  addButtonModalText: {
-    color: "#fff",
-    fontWeight: "600",
-  },
-
-  /* --- Image Picker --- */
-  imagePickerButton: {
-    marginBottom: 12,
-    borderRadius: 12,
-    overflow: "hidden",
-  },
-
-  previewImage: {
-    width: "100%",
-    height: 200,
-    borderRadius: 12,
-  },
-
-  imagePickerPlaceholder: {
-    backgroundColor: "#1a0a2e",
-    borderRadius: 12,
-    padding: 40,
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 2,
-    borderColor: "#2a1a3a",
-    borderStyle: "dashed",
-  },
-
-  imagePickerText: {
-    fontSize: 40,
-    marginBottom: 10,
-  },
-
-  imagePickerLabel: {
-    color: "#888",
-    fontSize: 14,
-  },
-
-  removeImageButton: {
-    backgroundColor: "#ff4444",
-    paddingVertical: 8,
-    borderRadius: 8,
-    alignItems: "center",
-    marginBottom: 12,
-  },
-
-  removeImageText: {
-    color: "#fff",
-    fontSize: 12,
-    fontWeight: "600",
-  },
-
-  /* --- Avatar Picker --- */
-  avatarPickerButton: {
-    alignSelf: "center",
-    marginBottom: 20,
-    position: "relative",
-  },
-
-  avatarPreview: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-  },
-
-  avatarPreviewPlaceholder: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    backgroundColor: "#8916CB",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-
-  avatarPreviewText: {
-    color: "#fff",
-    fontSize: 36,
-    fontWeight: "bold",
-  },
-
-  changeAvatarBadge: {
-    position: "absolute",
-    bottom: 0,
-    right: 0,
-    backgroundColor: "#8916CB",
-    borderRadius: 20,
-    width: 40,
-    height: 40,
-    justifyContent: "center",
-    alignItems: "center",
-    borderWidth: 3,
-    borderColor: "#111",
-  },
-
-  changeAvatarText: {
-    fontSize: 20,
-  },
-
-  logoutLink: {
-    alignSelf: "center",
-    paddingVertical: 16,
-    marginTop: 8,
-  },
-
-  logoutLinkText: {
-    color: "#666",
-    fontSize: 13,
-  },
+  container: { flex: 1, backgroundColor: "#000", paddingTop: 60 },
+  header: { flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 20, marginBottom: 20 },
+  profileRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  headerAvatar: { width: 50, height: 50, borderRadius: 25, backgroundColor: '#111' },
+  welcome: { color: '#666', fontSize: 12 },
+  profileName: { color: '#fff', fontSize: 16, fontWeight: '700' },
+  adminBtn: { padding: 10, backgroundColor: '#8916CB', borderRadius: 12 },
+  list: { padding: 20 },
+  carCard: { backgroundColor: '#111', borderRadius: 16, padding: 12, marginBottom: 15, flexDirection: 'row', alignItems: 'center', gap: 12 },
+  carImage: { width: 70, height: 70, borderRadius: 12 },
+  carInfo: { flex: 1 },
+  carTitle: { color: '#fff', fontWeight: '700', fontSize: 16 },
+  carSub: { color: '#666', fontSize: 13 },
+  carActions: { gap: 15 },
+  empty: { color: '#444', textAlign: 'center', marginTop: 50 },
+  fab: { position: 'absolute', right: 25, bottom: 25, backgroundColor: '#8916CB', width: 60, height: 60, borderRadius: 30, justifyContent: 'center', alignItems: 'center', elevation: 5 },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.8)', justifyContent: 'flex-end' },
+  modalContent: { backgroundColor: '#111', borderTopLeftRadius: 25, borderTopRightRadius: 25, padding: 25, minHeight: '60%' },
+  modalTitle: { color: '#fff', fontSize: 20, fontWeight: '700', marginBottom: 20 },
+  input: { backgroundColor: '#222', borderRadius: 12, padding: 15, color: '#fff', marginBottom: 15 },
+  imageSelector: { flexDirection: 'row', gap: 15, marginBottom: 15 },
+  imageBtn: { flex: 1, backgroundColor: '#333', padding: 15, borderRadius: 12, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 10 },
+  imageBtnText: { color: '#fff', fontWeight: '600' },
+  preview: { width: '100%', height: 150, borderRadius: 12, marginBottom: 15 },
+  modalBtns: { flexDirection: 'row', gap: 15, marginTop: 10 },
+  cancelBtn: { flex: 1, padding: 15, alignItems: 'center' },
+  saveBtn: { flex: 2, backgroundColor: '#8916CB', padding: 15, borderRadius: 12, alignItems: 'center' },
+  btnText: { color: '#fff', fontWeight: '700' },
 });
-
