@@ -5,13 +5,20 @@ class ApiService {
   async request(endpoint, options = {}) {
     const url = `${API_BASE_URL}${endpoint}`;
     
+    const isFormData = options.body instanceof FormData;
+    
     const fetchOptions = {
       ...options,
       headers: {
-        'Content-Type': 'application/json',
+        ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
         ...(options.headers || {}),
       },
     };
+
+    // Very important: if it's FormData, let the browser set the Content-Type with boundary
+    if (isFormData && fetchOptions.headers['Content-Type']) {
+      delete fetchOptions.headers['Content-Type'];
+    }
 
     console.log(`[API] Fetching ${url}...`);
     const response = await fetch(url, fetchOptions);
@@ -146,6 +153,29 @@ export const profilesApi = {
   follow: (id, followerId) => apiService.post(`/profiles/${id}/follow`, { follower_id: followerId }),
   
   unfollow: (id, followerId) => apiService.delete(`/profiles/${id}/follow?follower_id=${followerId}`),
+};
+
+export const storageApi = {
+  upload: (fileUri, bucket) => {
+    const formData = new FormData();
+    // On Web, we can just pass the URI or File object
+    // On Mobile (React Native), we need to format it specifically
+    const filename = fileUri.split('/').pop();
+    const match = /\.(\w+)$/.exec(filename);
+    const type = match ? `image/${match[1]}` : `image`;
+
+    formData.append('file', {
+      uri: fileUri,
+      name: filename,
+      type: type,
+    });
+    formData.append('bucket', bucket);
+
+    return apiService.request('/storage/upload', {
+      method: 'POST',
+      body: formData,
+    });
+  },
 };
 
 export default apiService;

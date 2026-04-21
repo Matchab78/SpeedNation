@@ -104,11 +104,28 @@ export const storageService = {
   },
 
   /**
-   * Uploader une image (non implémenté - nécessite S3, Cloudinary, etc.)
+   * Uploader une image vers le stockage local
    */
-  async uploadImage(imageUri, bucket, fileName = null) {
-    console.warn('Storage non implémenté - utilisez S3, Cloudinary ou un service similaire');
-    return { url: null, error: { message: 'Storage non implémenté' } };
+  async uploadImage(imageUri, bucket) {
+    try {
+      const response = await storageApi.upload(imageUri, bucket);
+      
+      if (response && response.data && response.data.url) {
+        // L'URL retournée est relative (ex: /uploads/avatars/xxx.jpg)
+        // On la transforme en URL absolue pour que l'app puisse l'afficher
+        // On récupère la base de l'API (ex: http://51.12.53.100/api)
+        // Et on enlève le /api pour avoir la racine du serveur
+        const baseUrl = window.location.origin; 
+        const fullUrl = `${baseUrl}${response.data.url}`;
+        
+        return { url: fullUrl, error: null };
+      }
+      
+      return { url: null, error: { message: 'Réponse invalide du serveur' } };
+    } catch (error) {
+      console.error('Erreur lors de l\'upload:', error);
+      return { url: null, error: { message: error.message || 'Erreur lors de l\'upload' } };
+    }
   },
 
   /**

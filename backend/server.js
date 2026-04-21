@@ -22,6 +22,11 @@ app.use((req, res, next) => {
   next();
 });
 
+const path = require('path');
+
+// Serve static files from the uploads directory
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
 // Routes
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/cars', require('./routes/cars'));
@@ -29,6 +34,7 @@ app.use('/api/events', require('./routes/events'));
 app.use('/api/messaging', require('./routes/messaging'));
 app.use('/api/profiles', require('./routes/profiles'));
 app.use('/api/admin', require('./routes/admin'));
+app.use('/api/storage', require('./routes/storage'));
 
 // Health check
 app.get('/health', (req, res) => {

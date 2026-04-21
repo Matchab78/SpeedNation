@@ -43,6 +43,8 @@ services:
       - DB_PASSWORD=${POSTGRES_PASSWORD}
     depends_on:
       - postgres
+    volumes:
+      - backend_uploads:/app/uploads
     networks:
       - speednation-network
 
@@ -61,3 +63,4 @@ services:
 
 volumes:
   postgres_data:
+  backend_uploads:
