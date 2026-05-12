@@ -58,7 +58,7 @@ export default function LoginScreen({ navigation }) {
         return;
       }
 
-      if (data?.user) {
+      if (!error) {
         if (Platform.OS === "web") {
           window.alert("Connexion réussie ! Bienvenue sur SpeedNation.");
           navigation.navigate("Tabs", { screen: "Home" });
@@ -113,7 +113,7 @@ export default function LoginScreen({ navigation }) {
         return;
       }
 
-      if (data?.user) {
+      if (!error) {
         if (Platform.OS === "web") {
           window.alert("Bienvenue ! Ton compte a été créé et tu es maintenant connecté.");
           navigation.navigate("Tabs", { screen: "Home" });
