@@ -23,19 +23,21 @@ export default function TabNavigator() {
         tabBarShowLabel: false,
         tabBarStyle: {
           position: "absolute",
-          backgroundColor: "transparent",
+          backgroundColor: "#16121F",
           height: 80,
           left: 20,
           right: 20,
-          bottom: 20,
-          borderRadius: 25,
-          shadowColor: "transparent",
-          shadowOpacity: 0,
-          shadowRadius: 0,
-          elevation: 0,
-          borderTopWidth: 0,
-          paddingTop: 15,
-          paddingBottom: 15,
+          bottom: 25,
+          borderRadius: 30,
+          borderWidth: 1,
+          borderColor: "rgba(80, 70, 110, 0.4)",
+          borderTopWidth: 1,
+          shadowColor: "#000",
+          shadowOpacity: 0.3,
+          shadowRadius: 10,
+          elevation: 5,
+          paddingTop: 10,
+          paddingBottom: 10,
         },
         tabBarItemStyle: {
           justifyContent: "center",
@@ -47,13 +49,13 @@ export default function TabNavigator() {
 
           switch (route.name) {
             case "Home":
-              iconName = "home-outline";
+              iconName = focused ? "home" : "home-outline";
               break;
             case "Search":
-              iconName = "search";
+              iconName = focused ? "search" : "search-outline";
               break;
             case "Messages":
-              iconName = "chatbubble-outline";
+              iconName = focused ? "chatbubble" : "chatbubble-outline";
               break;
             case "Events":
               IconComponent = FontAwesome5;
@@ -69,12 +71,13 @@ export default function TabNavigator() {
             <View style={{ justifyContent: "center", alignItems: "center" }}>
               <IconComponent
                 name={iconName}
-                size={26}
-                color={focused ? "#8916CB" : "#8e8e8e"}
+                size={22}
+                color={focused ? "#8916CB" : "#9B95AE"}
               />
             </View>
           );
         },
+
       })}
     >
       <Tab.Screen name="Home" component={HomeScreen} />
