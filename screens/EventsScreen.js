@@ -5,6 +5,7 @@ import {
   StyleSheet, 
   TouchableOpacity, 
   FlatList,
+  ScrollView,
   ImageBackground,
   ActivityIndicator,
   Alert,
@@ -308,18 +309,27 @@ export default function EventsScreen({ navigation }) {
           <ActivityIndicator color="#ffffff" size="large" />
         </View>
       ) : (
-        <FlatList
-          data={otherEvents}
-          keyExtractor={(item) => item.id}
-          renderItem={renderEventCard}
-          ListHeaderComponent={renderHeader}
+        <ScrollView 
+          style={{ flex: 1 }}
           contentContainerStyle={{ paddingBottom: 40 }}
-          ListEmptyComponent={
-            <Text style={styles.emptyText}>
-              Aucun événement pour le moment.
-            </Text>
-          }
-        />
+          showsVerticalScrollIndicator={false}
+        >
+          {renderHeader()}
+          
+          <View style={{ paddingHorizontal: 0 }}>
+            {otherEvents.length > 0 ? (
+              otherEvents.map(item => (
+                <View key={item.id}>
+                  {renderEventCard({ item })}
+                </View>
+              ))
+            ) : (
+              <Text style={styles.emptyText}>
+                Aucun événement pour le moment.
+              </Text>
+            )}
+          </View>
+        </ScrollView>
       )}
     </View>
   );
