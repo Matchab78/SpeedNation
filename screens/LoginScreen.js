@@ -62,9 +62,7 @@ export default function LoginScreen({ navigation }) {
         Alert.alert("Succès", "Connexion réussie ! Bienvenue sur SpeedNation.", [
           {
             text: "C'est parti",
-            onPress: () => {
-              navigation.navigate("Home");
-            },
+            onPress: () => navigation.navigate("Tabs", { screen: "Home" }),
           },
         ]);
       }
@@ -117,9 +115,7 @@ export default function LoginScreen({ navigation }) {
           [
             {
               text: "C'est parti",
-              onPress: () => {
-                navigation.navigate("Home");
-              },
+              onPress: () => navigation.navigate("Tabs", { screen: "Home" }),
             },
           ]
         );
