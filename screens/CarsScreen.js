@@ -201,33 +201,31 @@ export default function CarsScreen({ navigation }) {
         )}
       </View>
 
-      {/* --- TABS --- */}
-      <View style={styles.tabs}>
+      {/* --- TABS + BOUTON AJOUTER --- */}
+      <View style={styles.tabsRow}>
         <TouchableOpacity onPress={() => setActiveTab("cars")}>
           <Text style={[styles.tabText, activeTab === "cars" && styles.activeTabText]}>MES VOITURES</Text>
         </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.addCarHeaderBtn}
+          onPress={() => {
+            setNewCar({ name: "", brand: "", model: "", year: "", price_purchased: "", power_hp: "", image_url: "", imageUri: null });
+            setShowAddModal(true);
+          }}
+        >
+          <Text style={styles.addCarHeaderBtnText}>+ Ajouter</Text>
+        </TouchableOpacity>
       </View>
 
-      {/* --- LISTE + FAB dans un wrapper flex:1 --- */}
+      {/* --- LISTE --- */}
       <View style={{ flex: 1 }}>
         <FlatList
           data={cars}
           keyExtractor={(item) => item.id}
           renderItem={renderCarCard}
-          contentContainerStyle={[styles.carsListContent, { paddingBottom: 100 }]}
+          contentContainerStyle={styles.carsListContent}
           ListEmptyComponent={<Text style={styles.emptyText}>Aucune voiture ajoutée</Text>}
         />
-
-        <TouchableOpacity
-          style={styles.fab}
-          onPress={() => {
-            setNewCar({ name: "", brand: "", model: "", year: "", price_purchased: "", power_hp: "", image_url: "", imageUri: null });
-            setShowAddModal(true);
-          }}
-          activeOpacity={0.85}
-        >
-          <Text style={styles.fabIcon}>+</Text>
-        </TouchableOpacity>
       </View>
 
       {/* --- MODAL AJOUTER VOITURE --- */}
@@ -318,9 +316,12 @@ const styles = StyleSheet.create({
   followers: { color: "#666", fontSize: 11, fontWeight: "800", marginTop: 15, letterSpacing: 1 },
   roleBadge: { backgroundColor: "#8916CB", paddingHorizontal: 12, paddingVertical: 4, borderRadius: 8, marginTop: 15 },
   roleBadgeText: { color: "#fff", fontSize: 11, fontWeight: "700" },
+  tabsRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginVertical: 20, borderBottomWidth: 1, borderBottomColor: "#222", paddingHorizontal: 20, paddingBottom: 10 },
   tabs: { flexDirection: "row", justifyContent: "center", marginVertical: 20, borderBottomWidth: 1, borderBottomColor: "#222" },
   tabText: { color: "#666", fontSize: 13, fontWeight: "700", paddingBottom: 10, marginHorizontal: 20 },
   activeTabText: { color: "#fff", borderBottomWidth: 2, borderBottomColor: "#fff" },
+  addCarHeaderBtn: { backgroundColor: "#8916CB", paddingVertical: 8, paddingHorizontal: 16, borderRadius: 20 },
+  addCarHeaderBtnText: { color: "#fff", fontWeight: "700", fontSize: 13 },
   carsListContent: { paddingHorizontal: 20, paddingBottom: 100 },
   carCard: { backgroundColor: "#111", borderRadius: 18, marginBottom: 15, flexDirection: "row", alignItems: "center", padding: 12, borderWidth: 1, borderColor: "#222" },
   carImage: { width: 80, height: 80, borderRadius: 12 },
