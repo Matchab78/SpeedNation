@@ -149,6 +149,8 @@ export default function CarsScreen({ navigation }) {
     } finally {
       setUploadingImage(false);
     }
+  };
+
   const handleAddCar = async () => {
      if (!newCar.name.trim()) return Alert.alert("Erreur", "Nom requis");
      setUploadingImage(true);
