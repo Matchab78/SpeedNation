@@ -149,8 +149,6 @@ export default function CarsScreen({ navigation }) {
     } finally {
       setUploadingImage(false);
     }
-  };
-
   const handleAddCar = async () => {
      if (!newCar.name.trim()) return Alert.alert("Erreur", "Nom requis");
      setUploadingImage(true);
@@ -174,6 +172,39 @@ export default function CarsScreen({ navigation }) {
      finally { setUploadingImage(false); }
   };
 
+  const handleUpdateCar = async () => {
+    if (!editCar.name.trim()) return Alert.alert("Erreur", "Nom requis");
+    setUploadingImage(true);
+    try {
+      let imageUrl = editCar.image_url || null;
+      if (editCar.imageUri) {
+        const { url, error } = await storageService.uploadCarImage(`edit-${editingCarId}-${Date.now()}`, editCar.imageUri);
+        if (error) throw error;
+        imageUrl = url;
+      }
+      
+      await carService.updateCar(editingCarId, user.id, { 
+        ...editCar, 
+        image_url: imageUrl,
+        price_purchased: parseFloat(editCar.price_purchased || 0),
+        power_hp: parseInt(editCar.power_hp || 0),
+        year: parseInt(editCar.year || 0)
+      });
+      
+      setShowEditCarModal(false);
+      loadCars();
+      Alert.alert("Succès", "Voiture mise à jour !");
+    } catch (e) { 
+      console.error(e);
+      Alert.alert("Erreur", "Échec de la mise à jour"); 
+    } finally { 
+      setUploadingImage(false); 
+    }
+  };
+
+  const [showActionMenu, setShowActionMenu] = useState(false);
+  const [selectedCar, setSelectedCar] = useState(null);
+
   const renderCarCard = ({ item }) => (
     <View style={styles.carCard}>
       <Image source={{ uri: getImageUrl(item.image_url) || 'https://via.placeholder.com/150' }} style={styles.carImage} />
@@ -181,17 +212,13 @@ export default function CarsScreen({ navigation }) {
         <Text style={styles.carTitle}>{item.name}</Text>
         <Text style={styles.carDetails}>{item.price_purchased}€ • {item.power_hp} Ch</Text>
       </View>
-      <TouchableOpacity style={styles.carCardMenuButton} onPress={() => {
-          Alert.alert(item.name, "", [
-            { text: "Annuler", style: "cancel" },
-            { text: "Modifier", onPress: () => {
-                setEditingCarId(item.id);
-                setEditCar({...item, year: item.year?.toString() || "", price_purchased: item.price_purchased?.toString() || "", power_hp: item.power_hp?.toString() || "", imageUri: null});
-                setShowEditCarModal(true);
-            }},
-            { text: "Supprimer", style: "destructive", onPress: async () => { await carService.deleteCar(item.id, user.id); loadCars(); }}
-          ]);
-      }}>
+      <TouchableOpacity 
+        style={styles.carCardMenuButton} 
+        onPress={() => {
+          setSelectedCar(item);
+          setShowActionMenu(true);
+        }}
+      >
         <Text style={styles.carCardMenuText}>☰</Text>
       </TouchableOpacity>
     </View>
@@ -236,6 +263,63 @@ export default function CarsScreen({ navigation }) {
           <View style={styles.roleBadge}><Text style={styles.roleBadgeText}>Administrateur</Text></View>
         )}
       </View>
+
+      {/* --- MODALE ACTIONS VOITURE (Custom Menu) --- */}
+      <Modal visible={showActionMenu} animationType="fade" transparent onRequestClose={() => setShowActionMenu(false)}>
+        <TouchableOpacity 
+          style={styles.modalOverlay} 
+          activeOpacity={1} 
+          onPress={() => setShowActionMenu(false)}
+        >
+          <View style={styles.actionMenuContent}>
+            <Text style={styles.actionMenuTitle}>{selectedCar?.name}</Text>
+            
+            <TouchableOpacity 
+              style={styles.actionButton}
+              onPress={() => {
+                setShowActionMenu(false);
+                setEditingCarId(selectedCar.id);
+                setEditCar({
+                  ...selectedCar, 
+                  year: selectedCar.year?.toString() || "", 
+                  price_purchased: selectedCar.price_purchased?.toString() || "", 
+                  power_hp: selectedCar.power_hp?.toString() || "", 
+                  imageUri: null
+                });
+                setShowEditCarModal(true);
+              }}
+            >
+              <Ionicons name="create-outline" size={20} color="#fff" />
+              <Text style={styles.actionButtonText}>Modifier la voiture</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              style={[styles.actionButton, { borderBottomWidth: 0 }]}
+              onPress={() => {
+                setShowActionMenu(false);
+                Alert.alert(
+                  "Supprimer",
+                  "Voulez-vous vraiment supprimer cette voiture ?",
+                  [
+                    { text: "Annuler", style: "cancel" },
+                    { text: "Supprimer", style: "destructive", onPress: async () => {
+                        await carService.deleteCar(selectedCar.id, user.id);
+                        loadCars();
+                    }}
+                  ]
+                );
+              }}
+            >
+              <Ionicons name="trash-outline" size={20} color="#f97373" />
+              <Text style={[styles.actionButtonText, { color: "#f97373" }]}>Supprimer définitivement</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.actionCancelButton} onPress={() => setShowActionMenu(false)}>
+              <Text style={styles.actionCancelText}>Annuler</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
 
       {/* --- MODALE FOLLOWERS/FOLLOWING --- */}
       <Modal visible={showFollowersModal} animationType="slide" transparent>
@@ -337,6 +421,47 @@ export default function CarsScreen({ navigation }) {
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.addButtonModal} onPress={handleAddCar} disabled={uploadingImage}>
                   {uploadingImage ? <ActivityIndicator color="#fff" /> : <Text style={styles.addText}>Ajouter</Text>}
+                </TouchableOpacity>
+              </View>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      {/* --- MODAL MODIFIER VOITURE --- */}
+      <Modal visible={showEditCarModal} animationType="slide" transparent={true} onRequestClose={() => setShowEditCarModal(false)}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <ScrollView keyboardShouldPersistTaps="handled">
+              <Text style={styles.modalTitle}>Modifier la voiture</Text>
+              <TextInput style={styles.modalInput} placeholder="Nom de la voiture *" placeholderTextColor="#666" value={editCar.name} onChangeText={t => setEditCar({...editCar, name: t})} />
+              <TextInput style={styles.modalInput} placeholder="Marque" placeholderTextColor="#666" value={editCar.brand} onChangeText={t => setEditCar({...editCar, brand: t})} />
+              <TextInput style={styles.modalInput} placeholder="Modèle" placeholderTextColor="#666" value={editCar.model} onChangeText={t => setEditCar({...editCar, model: t})} />
+              <TextInput style={styles.modalInput} placeholder="Année" keyboardType="numeric" placeholderTextColor="#666" value={editCar.year} onChangeText={t => setEditCar({...editCar, year: t})} />
+              <TextInput style={styles.modalInput} placeholder="Prix d'achat (€)" keyboardType="numeric" placeholderTextColor="#666" value={editCar.price_purchased} onChangeText={t => setEditCar({...editCar, price_purchased: t})} />
+              <TextInput style={styles.modalInput} placeholder="Puissance (ch)" keyboardType="numeric" placeholderTextColor="#666" value={editCar.power_hp} onChangeText={t => setEditCar({...editCar, power_hp: t})} />
+              
+              <View style={styles.imageSelectorRow}>
+                <TouchableOpacity style={styles.avatarPicker} onPress={() => pickImage('gallery', 'editCar')}>
+                  <Image source={{ uri: editCar.imageUri || getImageUrl(editCar.image_url) || 'https://via.placeholder.com/150' }} style={styles.avatarPreview} />
+                  <View style={styles.avatarOverlay}><Ionicons name="camera" size={20} color="#fff" /></View>
+                </TouchableOpacity>
+                <View style={{flex: 1, gap: 10}}>
+                  <TouchableOpacity style={styles.smallImageBtn} onPress={() => pickImage('gallery', 'editCar')}>
+                    <Text style={styles.smallImageBtnText}>Galerie</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.smallImageBtn} onPress={() => pickImage('camera', 'editCar')}>
+                    <Text style={styles.smallImageBtnText}>Photo</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              <View style={styles.modalButtons}>
+                <TouchableOpacity style={styles.cancelButton} onPress={() => setShowEditCarModal(false)}>
+                  <Text style={styles.cancelText}>Annuler</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.addButtonModal} onPress={handleUpdateCar} disabled={uploadingImage}>
+                  {uploadingImage ? <ActivityIndicator color="#fff" /> : <Text style={styles.addText}>Enregistrer</Text>}
                 </TouchableOpacity>
               </View>
             </ScrollView>
@@ -462,4 +587,54 @@ const styles = StyleSheet.create({
   addButtonModal: { flex: 1, backgroundColor: COLORS.primary, borderRadius: 999, alignItems: "center", padding: 15 },
   cancelText: { color: COLORS.mutedForeground, fontWeight: "700" },
   addText: { color: "#fff", fontWeight: "700" },
+
+  /* --- ACTION MENU STYLES --- */
+  actionMenuContent: {
+    backgroundColor: COLORS.surface,
+    marginHorizontal: 20,
+    borderRadius: 24,
+    padding: 10,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.5,
+    shadowRadius: 20,
+    elevation: 10,
+  },
+  actionMenuTitle: {
+    color: COLORS.foreground,
+    fontSize: 18,
+    fontWeight: "700",
+    textAlign: "center",
+    paddingVertical: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(255,255,255,0.05)",
+  },
+  actionButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 15,
+    paddingHorizontal: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(255,255,255,0.05)",
+    gap: 15,
+  },
+  actionButtonText: {
+    color: COLORS.foreground,
+    fontSize: 16,
+    fontWeight: "600",
+  },
+  actionCancelButton: {
+    marginTop: 5,
+    paddingVertical: 15,
+    alignItems: "center",
+    backgroundColor: "rgba(255,255,255,0.03)",
+    borderRadius: 18,
+  },
+  actionCancelText: {
+    color: COLORS.mutedForeground,
+    fontSize: 15,
+    fontWeight: "700",
+  },
 });
