@@ -22,24 +22,25 @@
 
     <!-- The `react-native-web` recommended style reset -->
     <style id="expo-reset">
-      html, body {
-        height: 100%;
-        margin: 0;
-        padding: 0;
-        background-color: #0B0813;
-        /* Extend background into safe areas (notch, home bar) */
-        padding-top: env(safe-area-inset-top);
-        padding-top: constant(safe-area-inset-top);
+      html {
+        background-color: #0B0813 !important;
+        height: -webkit-fill-available;
       }
       body {
+        height: 100%;
+        height: -webkit-fill-available;
+        margin: 0;
+        padding: 0;
+        background-color: #0B0813 !important;
         overflow: hidden;
-        background-color: #0B0813;
+        /* Safe area handling */
+        padding-top: env(safe-area-inset-top);
       }
       #root {
         display: flex;
         height: 100%;
         flex: 1;
-        background-color: #0B0813;
+        background-color: #0B0813 !important;
       }
     </style>
   </head>
