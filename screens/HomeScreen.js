@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState, useMemo } from "react";
 import {
   View,
   Text,
@@ -9,79 +9,60 @@ import {
   Animated,
   SafeAreaView,
   StatusBar,
+  ActivityIndicator,
+  RefreshControl,
+  Alert,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons, Feather } from "@expo/vector-icons";
-import { BlurView } from "expo-blur";
+import { eventService } from "../services/eventService";
+import { getImageUrl } from "../services/apiService";
 import { useAuth } from "../utils/authContext";
 
 // --- THÈME (palette SpeedNation, alignée avec le design Lovable) ---
 const COLORS = {
-  background: "#0B0813",        // fond noir très sombre violacé (≈ oklch(0.13 0.02 285))
-  surface: "#16121F",            // surfaces de cards
-  surfaceElevated: "#1E1A2B",    // boutons, badges
+  background: "#0B0813",
+  surface: "#16121F",
+  surfaceElevated: "#1E1A2B",
   border: "rgba(80, 70, 110, 0.4)",
-  borderStrong: "rgba(120, 100, 160, 0.5)",
   foreground: "#FAFAFA",
   mutedForeground: "#9B95AE",
-  primary: "#8916CB",            // violet SpeedNation
+  primary: "#8916CB",
   primaryGlow: "#A855F7",
-  primaryDark: "#6B0FA0",
 };
 
-// --- DONNÉES MOCKÉES (faciles à remplacer par eventService.getAllEvents() plus tard) ---
-const FEATURED_EVENT = {
-  title: "Midnight Run : A86 West Loop",
-  time: "23:30",
-  location: "Tunnel de Nanterre",
-  tags: ["Nocturne", "JDM Only"],
-  participants: 42,
-  image: require("../assets/hero-event.jpg"),
-};
+// --- HELPERS ---
 
-const UPCOMING_EVENTS = [
-  {
-    id: "1",
-    tag: "Youngtimers",
-    title: "Café & Carbu : Sunday Classics",
-    when: "7 Mai · 09:00",
-    where: "Place Vendôme, Paris",
-    participants: 12,
-    img: require("../assets/event-youngtimers.jpg"),
-  },
-  {
-    id: "2",
-    tag: "Circuit",
-    title: "Track Day : Montlhéry Speed Test",
-    when: "15 Mai · 10:00",
-    where: "Autodrome de Linas",
-    participants: 28,
-    img: require("../assets/event-circuit.jpg"),
-  },
-];
+// Source d'image pour les cards (avec fallback)
+function getCardImageSource(event, fallbackIndex = 0) {
+  const fallbacks = [
+    require("../assets/event-youngtimers.jpg"),
+    require("../assets/event-circuit.jpg"),
+    require("../assets/event-coffee.jpg"),
+    require("../assets/event-jdm.jpg"),
+  ];
+  if (event?.image_url) {
+    return { uri: getImageUrl(event.image_url.trim()) };
+  }
+  return fallbacks[fallbackIndex % fallbacks.length];
+}
 
-const LATEST_EVENTS = [
-  {
-    id: "3",
-    tag: "Open",
-    title: "Cars & Coffee Bordeaux",
-    when: "Ajouté il y a 2h",
-    where: "Quai des Chartrons",
-    participants: 47,
-    img: require("../assets/event-coffee.jpg"),
-  },
-  {
-    id: "4",
-    tag: "JDM",
-    title: "Garage Night JDM",
-    when: "Ajouté hier",
-    where: "Lyon Confluence",
-    participants: 22,
-    img: require("../assets/event-jdm.jpg"),
-  },
-];
+// Source d'image pour le hero (avec fallback)
+function getHeroImageSource(event) {
+  if (event?.image_url) {
+    return { uri: getImageUrl(event.image_url.trim()) };
+  }
+  return require("../assets/hero-event.jpg");
+}
 
-// --- COMPOSANT : Section label (kicker UPPERCASE + action "Tout voir") ---
+// Tag d'affichage déduit de la visibility
+function getEventTag(event, fallback = "Event") {
+  if (event?.visibility === "private") return "Privé";
+  if (event?.visibility === "public") return "Public";
+  return fallback;
+}
+
+// --- COMPOSANT : Label de section ---
 function SectionLabel({ children, action }) {
   return (
     <View style={styles.sectionLabelRow}>
@@ -91,15 +72,19 @@ function SectionLabel({ children, action }) {
   );
 }
 
-// --- COMPOSANT : Card événement (horizontale avec image + infos) ---
-function EventCard({ item, onJoin }) {
+// --- COMPOSANT : Card événement ---
+function EventCard({ item, fallbackIndex, onJoin, onPress }) {
   return (
-    <View style={styles.card}>
-      <Image source={item.img} style={styles.cardImage} resizeMode="cover" />
+    <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.85}>
+      <Image
+        source={getCardImageSource(item, fallbackIndex)}
+        style={styles.cardImage}
+        resizeMode="cover"
+      />
 
       <View style={styles.cardContent}>
         <View style={styles.cardTagWrapper}>
-          <Text style={styles.cardTagText}>{item.tag}</Text>
+          <Text style={styles.cardTagText}>{getEventTag(item)}</Text>
         </View>
 
         <Text style={styles.cardTitle} numberOfLines={1}>
@@ -107,14 +92,14 @@ function EventCard({ item, onJoin }) {
         </Text>
 
         <Text style={styles.cardSubtitle} numberOfLines={1}>
-          {item.when} · {item.where}
+          {item.event_date} · {item.location || "Lieu à confirmer"}
         </Text>
 
         <View style={styles.cardFooter}>
           <View style={styles.cardParticipants}>
             <Ionicons name="people-outline" size={14} color={COLORS.mutedForeground} />
             <Text style={styles.cardParticipantsText}>
-              {item.participants} participants
+              {item.participant_count || 0} participants
             </Text>
           </View>
 
@@ -124,7 +109,7 @@ function EventCard({ item, onJoin }) {
           </TouchableOpacity>
         </View>
       </View>
-    </View>
+    </TouchableOpacity>
   );
 }
 
@@ -135,16 +120,8 @@ function LivePulse() {
   useEffect(() => {
     const loop = Animated.loop(
       Animated.sequence([
-        Animated.timing(opacity, {
-          toValue: 0.3,
-          duration: 800,
-          useNativeDriver: true,
-        }),
-        Animated.timing(opacity, {
-          toValue: 1,
-          duration: 800,
-          useNativeDriver: true,
-        }),
+        Animated.timing(opacity, { toValue: 0.3, duration: 800, useNativeDriver: true }),
+        Animated.timing(opacity, { toValue: 1, duration: 800, useNativeDriver: true }),
       ])
     );
     loop.start();
@@ -163,26 +140,102 @@ function LivePulse() {
 export default function HomeScreen({ navigation }) {
   const { user, profile } = useAuth();
 
-  // Greeting dynamique selon connexion
+  const [events, setEvents] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [refreshTick, setRefreshTick] = useState(0);
+
+  // Greeting dynamique
   const firstName = profile?.full_name ? profile.full_name.split(" ")[0] : null;
   const greeting = firstName ? `Bonsoir, ${firstName}.` : "Bienvenue sur SpeedNation";
 
-  // Handlers de navigation (préservent tes liens existants)
+  // === FETCH (même pattern que EventsScreen) ===
+  useEffect(() => {
+    const fetchEvents = async () => {
+      setLoading(true);
+      try {
+        const { data, error } = await eventService.getAllEvents();
+        if (error) {
+          console.error("Erreur de chargement des événements:", error);
+          // On n'affiche pas d'Alert sur la HomeScreen pour ne pas être trop intrusif
+          // (l'utilisateur verra juste l'écran vide). Si tu préfères une Alert, décommente :
+          // Alert.alert("Erreur", "Impossible de charger les événements");
+          return;
+        }
+        setEvents(data || []);
+      } catch (err) {
+        console.error("Erreur inattendue de chargement des événements:", err);
+      } finally {
+        setLoading(false);
+        setRefreshing(false);
+      }
+    };
+
+    fetchEvents();
+  }, [refreshTick]);
+
+  // === REFRESH AUTO AU FOCUS (même pattern que EventsScreen) ===
+  useEffect(() => {
+    const unsubscribe = navigation.addListener("focus", () => {
+      setRefreshTick((prev) => prev + 1);
+    });
+    return unsubscribe;
+  }, [navigation]);
+
+  // === PULL-TO-REFRESH ===
+  const onRefresh = () => {
+    setRefreshing(true);
+    setRefreshTick((prev) => prev + 1);
+  };
+
+  // === DÉRIVATION : hero + 2 listes ===
+  const featuredEvent = useMemo(() => events.find((e) => e.is_featured), [events]);
+
+  const upcomingEvents = useMemo(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return events
+      .filter((e) => {
+        if (e.is_featured) return false;
+        if (!e.event_date) return false;
+        const eventDate = new Date(e.event_date);
+        return eventDate >= today;
+      })
+      .slice(0, 2);
+  }, [events]);
+
+  const latestEvents = useMemo(() => {
+    const upcomingIds = new Set(upcomingEvents.map((e) => e.id));
+    return [...events]
+      .filter((e) => !e.is_featured && !upcomingIds.has(e.id))
+      .sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0))
+      .slice(0, 2);
+  }, [events, upcomingEvents]);
+
+  // === HANDLERS NAVIGATION ===
   const goToLogin = () => navigation.navigate("LoginScreen");
   const goToProfile = () => navigation.navigate("Cars");
   const goToAllEvents = () => navigation.navigate("Events");
 
+  // Rejoindre un événement (placeholder pour l'instant — à brancher quand tu auras
+  // décidé du flux : participation via eventService.joinEvent ? autre ?)
+  const handleJoinEvent = (eventId) => {
+    if (!user) {
+      navigation.navigate("LoginScreen");
+      return;
+    }
+    // TODO: brancher à eventService.joinEvent(eventId, user.id) quand prêt
+    Alert.alert("Bientôt", "L'inscription aux événements arrive prochainement !");
+  };
+
+  // === RENDU ===
   return (
     <SafeAreaView style={styles.safe}>
       <StatusBar barStyle="light-content" backgroundColor={COLORS.background} />
 
-      {/* --- HEADER STICKY (logo + bouton login/profil) --- */}
+      {/* HEADER */}
       <View style={styles.header}>
-        <Image
-          source={require("../assets/logo.png")}
-          style={styles.logo}
-          resizeMode="contain"
-        />
+        <Image source={require("../assets/logo.png")} style={styles.logo} resizeMode="contain" />
 
         {user ? (
           <TouchableOpacity style={styles.profileButton} onPress={goToProfile}>
@@ -198,8 +251,16 @@ export default function HomeScreen({ navigation }) {
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={COLORS.primary}
+            colors={[COLORS.primary]}
+          />
+        }
       >
-        {/* --- GREETING --- */}
+        {/* GREETING */}
         <View style={styles.greetingSection}>
           <Text style={styles.greetingKicker}>BIENVENUE</Text>
           <Text style={styles.greetingTitle}>{greeting}</Text>
@@ -208,112 +269,166 @@ export default function HomeScreen({ navigation }) {
           </Text>
         </View>
 
-        {/* --- HERO : ÉVÉNEMENT EN VEDETTE --- */}
-        <View style={styles.section}>
-          <SectionLabel action={<LivePulse />}>ÉVÉNEMENT EN VEDETTE</SectionLabel>
+        {/* LOADING */}
+        {loading && (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color={COLORS.primary} />
+          </View>
+        )}
 
-          <View style={styles.heroCard}>
-            <Image source={FEATURED_EVENT.image} style={styles.heroImage} resizeMode="cover" />
+        {/* CONTENU */}
+        {!loading && (
+          <>
+            {/* HERO */}
+            {featuredEvent && (
+              <View style={styles.section}>
+                <SectionLabel action={<LivePulse />}>ÉVÉNEMENT EN VEDETTE</SectionLabel>
 
-            {/* Gradient noir vers transparent (rend le texte lisible sur l'image) */}
-            <LinearGradient
-              colors={["transparent", "rgba(11, 8, 19, 0.7)", COLORS.background]}
-              locations={[0, 0.55, 1]}
-              style={styles.heroGradient}
-            />
+                <View style={styles.heroCard}>
+                  <Image
+                    source={getHeroImageSource(featuredEvent)}
+                    style={styles.heroImage}
+                    resizeMode="cover"
+                  />
 
-            <View style={styles.heroContent}>
-              {/* Tags Nocturne / JDM Only */}
-              <View style={styles.heroTagsRow}>
-                <View style={[styles.heroTag, styles.heroTagPrimary]}>
-                  <Text style={styles.heroTagTextPrimary}>{FEATURED_EVENT.tags[0]}</Text>
-                </View>
-                <View style={styles.heroTag}>
-                  <Text style={styles.heroTagText}>{FEATURED_EVENT.tags[1]}</Text>
-                </View>
-              </View>
-
-              <Text style={styles.heroTitle}>{FEATURED_EVENT.title}</Text>
-
-              <View style={styles.heroFooter}>
-                <View style={styles.heroInfoRow}>
-                  <View style={styles.heroInfoItem}>
-                    <Ionicons name="time-outline" size={15} color={COLORS.foreground} />
-                    <Text style={styles.heroInfoText}>{FEATURED_EVENT.time}</Text>
-                  </View>
-                  <View style={styles.heroInfoItem}>
-                    <Ionicons name="location-outline" size={15} color={COLORS.foreground} />
-                    <Text style={styles.heroInfoText}>{FEATURED_EVENT.location}</Text>
-                  </View>
-                </View>
-
-                {/* Avatars empilés + badge +42 */}
-                <View style={styles.avatarsRow}>
-                  <View style={[styles.avatar, styles.avatarMuted]} />
-                  <View style={[styles.avatar, styles.avatarSurface, { marginLeft: -10 }]} />
                   <LinearGradient
-                    colors={[COLORS.primaryGlow, COLORS.primary]}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
-                    style={[styles.avatar, styles.avatarPrimary, { marginLeft: -10 }]}
-                  >
-                    <Text style={styles.avatarPlusText}>+{FEATURED_EVENT.participants}</Text>
-                  </LinearGradient>
+                    colors={["transparent", "rgba(11, 8, 19, 0.7)", COLORS.background]}
+                    locations={[0, 0.55, 1]}
+                    style={styles.heroGradient}
+                  />
+
+                  <View style={styles.heroContent}>
+                    <View style={styles.heroTagsRow}>
+                      <View style={[styles.heroTag, styles.heroTagPrimary]}>
+                        <Text style={styles.heroTagTextPrimary}>
+                          {getEventTag(featuredEvent, "Vedette")}
+                        </Text>
+                      </View>
+                      {featuredEvent.max_participants && (
+                        <View style={styles.heroTag}>
+                          <Text style={styles.heroTagText}>
+                            Max {featuredEvent.max_participants}
+                          </Text>
+                        </View>
+                      )}
+                    </View>
+
+                    <Text style={styles.heroTitle} numberOfLines={2}>
+                      {featuredEvent.title}
+                    </Text>
+
+                    <View style={styles.heroFooter}>
+                      <View style={styles.heroInfoRow}>
+                        <View style={styles.heroInfoItem}>
+                          <Ionicons name="calendar-outline" size={15} color={COLORS.foreground} />
+                          <Text style={styles.heroInfoText} numberOfLines={1}>
+                            {featuredEvent.event_date}
+                          </Text>
+                        </View>
+                        <View style={styles.heroInfoItem}>
+                          <Ionicons name="location-outline" size={15} color={COLORS.foreground} />
+                          <Text style={styles.heroInfoText} numberOfLines={1}>
+                            {featuredEvent.location || "À confirmer"}
+                          </Text>
+                        </View>
+                      </View>
+
+                      <View style={styles.avatarsRow}>
+                        <View style={[styles.avatar, styles.avatarMuted]} />
+                        <View style={[styles.avatar, styles.avatarSurface, { marginLeft: -10 }]} />
+                        <LinearGradient
+                          colors={[COLORS.primaryGlow, COLORS.primary]}
+                          start={{ x: 0, y: 0 }}
+                          end={{ x: 1, y: 1 }}
+                          style={[styles.avatar, styles.avatarPrimary, { marginLeft: -10 }]}
+                        >
+                          <Text style={styles.avatarPlusText}>
+                            +{featuredEvent.participant_count || 0}
+                          </Text>
+                        </LinearGradient>
+                      </View>
+                    </View>
+                  </View>
                 </View>
               </View>
-            </View>
-          </View>
-        </View>
+            )}
 
-        {/* --- PROCHAINS RASSEMBLEMENTS --- */}
-        <View style={styles.section}>
-          <SectionLabel
-            action={
-              <TouchableOpacity onPress={goToAllEvents}>
-                <Text style={styles.actionLinkText}>
-                  Tout voir ({UPCOMING_EVENTS.length})
+            {/* PROCHAINS RASSEMBLEMENTS */}
+            {upcomingEvents.length > 0 && (
+              <View style={styles.section}>
+                <SectionLabel
+                  action={
+                    <TouchableOpacity onPress={goToAllEvents}>
+                      <Text style={styles.actionLinkText}>Tout voir ({events.length})</Text>
+                    </TouchableOpacity>
+                  }
+                >
+                  NOS PROCHAINS RASSEMBLEMENTS
+                </SectionLabel>
+
+                <View style={styles.cardList}>
+                  {upcomingEvents.map((item, idx) => (
+                    <EventCard
+                      key={item.id}
+                      item={item}
+                      fallbackIndex={idx}
+                      onPress={() => navigation.navigate("Events")}
+                      onJoin={() => handleJoinEvent(item.id)}
+                    />
+                  ))}
+                </View>
+              </View>
+            )}
+
+            {/* DERNIERS AJOUTS */}
+            {latestEvents.length > 0 && (
+              <View style={styles.section}>
+                <SectionLabel
+                  action={
+                    <TouchableOpacity onPress={goToAllEvents}>
+                      <Text style={styles.actionLinkText}>Tout voir ({events.length})</Text>
+                    </TouchableOpacity>
+                  }
+                >
+                  NOS DERNIERS AJOUTS
+                </SectionLabel>
+
+                <View style={styles.cardList}>
+                  {latestEvents.map((item, idx) => (
+                    <EventCard
+                      key={item.id}
+                      item={item}
+                      fallbackIndex={idx + 2}
+                      onPress={() => navigation.navigate("Events")}
+                      onJoin={() => handleJoinEvent(item.id)}
+                    />
+                  ))}
+                </View>
+              </View>
+            )}
+
+            {/* EMPTY STATE */}
+            {events.length === 0 && (
+              <View style={styles.emptyContainer}>
+                <Ionicons name="calendar-outline" size={40} color={COLORS.mutedForeground} />
+                <Text style={styles.emptyTitle}>Aucun événement</Text>
+                <Text style={styles.emptyMessage}>
+                  Les prochains rassemblements apparaîtront ici dès qu'ils seront publiés.
                 </Text>
-              </TouchableOpacity>
-            }
-          >
-            NOS PROCHAINS RASSEMBLEMENTS
-          </SectionLabel>
+              </View>
+            )}
 
-          <View style={styles.cardList}>
-            {UPCOMING_EVENTS.map((item) => (
-              <EventCard key={item.id} item={item} onJoin={() => {}} />
-            ))}
-          </View>
-        </View>
-
-        {/* --- DERNIERS AJOUTS --- */}
-        <View style={styles.section}>
-          <SectionLabel
-            action={
-              <TouchableOpacity onPress={goToAllEvents}>
-                <Text style={styles.actionLinkText}>
-                  Tout voir ({LATEST_EVENTS.length})
-                </Text>
-              </TouchableOpacity>
-            }
-          >
-            NOS DERNIERS AJOUTS
-          </SectionLabel>
-
-          <View style={styles.cardList}>
-            {LATEST_EVENTS.map((item) => (
-              <EventCard key={item.id} item={item} onJoin={() => {}} />
-            ))}
-          </View>
-        </View>
-
-        {/* --- BOUTON "VOIR TOUS LES ÉVÉNEMENTS" --- */}
-        <View style={styles.allEventsButtonWrapper}>
-          <TouchableOpacity style={styles.allEventsButton} onPress={goToAllEvents}>
-            <Ionicons name="add" size={16} color={COLORS.foreground} />
-            <Text style={styles.allEventsButtonText}>Voir tous les événements</Text>
-          </TouchableOpacity>
-        </View>
+            {/* BOUTON "VOIR TOUS" */}
+            {events.length > 0 && (
+              <View style={styles.allEventsButtonWrapper}>
+                <TouchableOpacity style={styles.allEventsButton} onPress={goToAllEvents}>
+                  <Ionicons name="add" size={16} color={COLORS.foreground} />
+                  <Text style={styles.allEventsButtonText}>Voir tous les événements</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -321,12 +436,8 @@ export default function HomeScreen({ navigation }) {
 
 // --- STYLES ---
 const styles = StyleSheet.create({
-  safe: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
+  safe: { flex: 1, backgroundColor: COLORS.background },
 
-  /* ----- HEADER ----- */
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -337,10 +448,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: COLORS.border,
   },
-  logo: {
-    width: 130,
-    height: 50,
-  },
+  logo: { width: 130, height: 50 },
   loginButton: {
     backgroundColor: COLORS.surfaceElevated,
     paddingVertical: 8,
@@ -349,11 +457,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.border,
   },
-  loginText: {
-    color: COLORS.foreground,
-    fontWeight: "600",
-    fontSize: 14,
-  },
+  loginText: { color: COLORS.foreground, fontWeight: "600", fontSize: 14 },
   profileButton: {
     backgroundColor: COLORS.primary,
     paddingVertical: 8,
@@ -362,23 +466,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.primary,
   },
-  profileText: {
-    color: COLORS.foreground,
-    fontWeight: "600",
-    fontSize: 14,
-  },
+  profileText: { color: COLORS.foreground, fontWeight: "600", fontSize: 14 },
 
-  /* ----- SCROLL ----- */
-  scrollContent: {
-    paddingBottom: 120, // espace pour le TabNavigator flottant
-  },
+  scrollContent: { paddingBottom: 120 },
 
-  /* ----- GREETING ----- */
-  greetingSection: {
-    paddingHorizontal: 20,
-    paddingTop: 24,
-    paddingBottom: 8,
-  },
+  greetingSection: { paddingHorizontal: 20, paddingTop: 24, paddingBottom: 8 },
   greetingKicker: {
     fontSize: 11,
     fontWeight: "700",
@@ -392,17 +484,14 @@ const styles = StyleSheet.create({
     color: COLORS.foreground,
     letterSpacing: -0.5,
   },
-  greetingSubtitle: {
-    fontSize: 14,
-    color: COLORS.mutedForeground,
-    marginTop: 6,
-  },
+  greetingSubtitle: { fontSize: 14, color: COLORS.mutedForeground, marginTop: 6 },
 
-  /* ----- SECTIONS ----- */
-  section: {
-    paddingHorizontal: 20,
-    marginTop: 28,
-  },
+  loadingContainer: { paddingVertical: 60, alignItems: "center" },
+  emptyContainer: { paddingVertical: 60, paddingHorizontal: 40, alignItems: "center", gap: 8 },
+  emptyTitle: { color: COLORS.foreground, fontSize: 16, fontWeight: "600", marginTop: 8 },
+  emptyMessage: { color: COLORS.mutedForeground, fontSize: 13, textAlign: "center" },
+
+  section: { paddingHorizontal: 20, marginTop: 28 },
   sectionLabelRow: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -416,32 +505,12 @@ const styles = StyleSheet.create({
     letterSpacing: 2.2,
     color: COLORS.mutedForeground,
   },
-  actionLinkText: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: COLORS.primary,
-  },
+  actionLinkText: { fontSize: 12, fontWeight: "600", color: COLORS.primary },
 
-  /* ----- LIVE PULSE ----- */
-  liveRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-  },
-  liveDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: COLORS.primary,
-  },
-  liveText: {
-    fontSize: 11,
-    fontWeight: "700",
-    letterSpacing: 2,
-    color: COLORS.primary,
-  },
+  liveRow: { flexDirection: "row", alignItems: "center", gap: 6 },
+  liveDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: COLORS.primary },
+  liveText: { fontSize: 11, fontWeight: "700", letterSpacing: 2, color: COLORS.primary },
 
-  /* ----- HERO ----- */
   heroCard: {
     height: 280,
     borderRadius: 24,
@@ -450,26 +519,10 @@ const styles = StyleSheet.create({
     borderColor: COLORS.border,
     backgroundColor: COLORS.surface,
   },
-  heroImage: {
-    ...StyleSheet.absoluteFillObject,
-    width: "100%",
-    height: "100%",
-  },
-  heroGradient: {
-    ...StyleSheet.absoluteFillObject,
-  },
-  heroContent: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    bottom: 0,
-    padding: 18,
-  },
-  heroTagsRow: {
-    flexDirection: "row",
-    gap: 8,
-    marginBottom: 12,
-  },
+  heroImage: { ...StyleSheet.absoluteFillObject, width: "100%", height: "100%" },
+  heroGradient: { ...StyleSheet.absoluteFillObject },
+  heroContent: { position: "absolute", left: 0, right: 0, bottom: 0, padding: 18 },
+  heroTagsRow: { flexDirection: "row", gap: 8, marginBottom: 12 },
   heroTag: {
     paddingHorizontal: 10,
     paddingVertical: 5,
@@ -503,56 +556,18 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     letterSpacing: -0.3,
   },
-  heroFooter: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  heroInfoRow: {
-    flexDirection: "row",
-    gap: 14,
-  },
-  heroInfoItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 5,
-  },
-  heroInfoText: {
-    fontSize: 13,
-    color: COLORS.foreground,
-    opacity: 0.9,
-  },
-  avatarsRow: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  avatar: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    borderWidth: 2,
-    borderColor: COLORS.background,
-  },
-  avatarSurface: {
-    backgroundColor: COLORS.surfaceElevated,
-  },
-  avatarMuted: {
-    backgroundColor: "#3A3247",
-  },
-  avatarPrimary: {
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  avatarPlusText: {
-    fontSize: 10,
-    fontWeight: "700",
-    color: COLORS.foreground,
-  },
+  heroFooter: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+  heroInfoRow: { flexDirection: "row", gap: 14, flex: 1, marginRight: 12 },
+  heroInfoItem: { flexDirection: "row", alignItems: "center", gap: 5, flexShrink: 1 },
+  heroInfoText: { fontSize: 13, color: COLORS.foreground, opacity: 0.9 },
+  avatarsRow: { flexDirection: "row", alignItems: "center" },
+  avatar: { width: 28, height: 28, borderRadius: 14, borderWidth: 2, borderColor: COLORS.background },
+  avatarSurface: { backgroundColor: COLORS.surfaceElevated },
+  avatarMuted: { backgroundColor: "#3A3247" },
+  avatarPrimary: { justifyContent: "center", alignItems: "center" },
+  avatarPlusText: { fontSize: 10, fontWeight: "700", color: COLORS.foreground },
 
-  /* ----- CARDS ----- */
-  cardList: {
-    gap: 12,
-  },
+  cardList: { gap: 12 },
   card: {
     flexDirection: "row",
     gap: 12,
@@ -562,15 +577,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.border,
   },
-  cardImage: {
-    width: 80,
-    height: 80,
-    borderRadius: 14,
-  },
-  cardContent: {
-    flex: 1,
-    justifyContent: "space-between",
-  },
+  cardImage: { width: 80, height: 80, borderRadius: 14 },
+  cardContent: { flex: 1, justifyContent: "space-between" },
   cardTagWrapper: {
     alignSelf: "flex-start",
     paddingHorizontal: 8,
@@ -594,26 +602,15 @@ const styles = StyleSheet.create({
     marginTop: 4,
     lineHeight: 18,
   },
-  cardSubtitle: {
-    fontSize: 12,
-    color: COLORS.mutedForeground,
-    marginTop: 2,
-  },
+  cardSubtitle: { fontSize: 12, color: COLORS.mutedForeground, marginTop: 2 },
   cardFooter: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     marginTop: 6,
   },
-  cardParticipants: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-  },
-  cardParticipantsText: {
-    fontSize: 11,
-    color: COLORS.mutedForeground,
-  },
+  cardParticipants: { flexDirection: "row", alignItems: "center", gap: 4 },
+  cardParticipantsText: { fontSize: 11, color: COLORS.mutedForeground },
   joinButton: {
     flexDirection: "row",
     alignItems: "center",
@@ -621,18 +618,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 6,
     paddingVertical: 4,
   },
-  joinButtonText: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: COLORS.primary,
-  },
+  joinButtonText: { fontSize: 12, fontWeight: "600", color: COLORS.primary },
 
-  /* ----- "VOIR TOUS" ----- */
-  allEventsButtonWrapper: {
-    alignItems: "center",
-    marginTop: 24,
-    paddingHorizontal: 20,
-  },
+  allEventsButtonWrapper: { alignItems: "center", marginTop: 24, paddingHorizontal: 20 },
   allEventsButton: {
     flexDirection: "row",
     alignItems: "center",
@@ -644,9 +632,5 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.border,
   },
-  allEventsButtonText: {
-    color: COLORS.foreground,
-    fontSize: 14,
-    fontWeight: "500",
-  },
+  allEventsButtonText: { color: COLORS.foreground, fontSize: 14, fontWeight: "500" },
 });
