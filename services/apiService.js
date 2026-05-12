@@ -174,6 +174,10 @@ export const profilesApi = {
   follow: (id, followerId) => apiService.post(`/profiles/${id}/follow`, { follower_id: followerId }),
   
   unfollow: (id, followerId) => apiService.delete(`/profiles/${id}/follow?follower_id=${followerId}`),
+
+  getRecent: () => apiService.get('/profiles/recent'),
+
+  heartbeat: (userId) => apiService.post('/profiles/heartbeat', { user_id: userId }),
 };
 
 export const storageApi = {

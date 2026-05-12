@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { authService } from '../services/authService';
 import { messagingService } from '../services/messagingService';
+import { profilesApi } from '../services/apiService';
 
 const AuthContext = createContext({});
 
@@ -64,6 +65,9 @@ export const AuthProvider = ({ children }) => {
 
   const loadUserData = async (userId) => {
     try {
+      // Signaler l'activité
+      profilesApi.heartbeat(userId);
+
       // Charger le profil
       const { data: profileData, error: profileError } = await authService.getUserProfile(userId);
       

@@ -13,13 +13,27 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { messagingService } from "../services/messagingService";
 import { useAuth } from "../utils/authContext";
-import { profilesApi } from "../services/apiService";
+import { profilesApi, getImageUrl } from "../services/apiService";
 
 export default function SearchScreen({ navigation }) {
   const { user } = useAuth();
   const [query, setQuery] = useState("");
   const [results, setResults] = useState([]);
+  const [recentUsers, setRecentUsers] = useState([]);
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    loadRecentUsers();
+  }, []);
+
+  const loadRecentUsers = async () => {
+    try {
+      const res = await profilesApi.getRecent();
+      if (res.data) setRecentUsers(res.data);
+    } catch (e) {
+      console.error(e);
+    }
+  };
 
   useEffect(() => {
     if (query.trim().length < 2) {
@@ -34,6 +48,7 @@ export default function SearchScreen({ navigation }) {
 
     return () => clearTimeout(t);
   }, [query]);
+
 
   const searchProfiles = async () => {
     setLoading(true);
@@ -81,10 +96,13 @@ export default function SearchScreen({ navigation }) {
         <Image
           style={styles.avatar}
           source={{
-            uri: item.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(item.full_name || "U")}`,
+            uri: item.avatar_url ? getImageUrl(item.avatar_url) : `https://ui-avatars.com/api/?name=${encodeURIComponent(item.full_name || "U")}&background=8916CB&color=fff`,
           }}
         />
-        <Text style={styles.name}>{item.full_name || "Utilisateur"}</Text>
+        <View>
+          <Text style={styles.name}>{item.full_name || "Utilisateur"}</Text>
+          {item.profession ? <Text style={styles.profession}>{item.profession}</Text> : null}
+        </View>
       </TouchableOpacity>
 
       {user?.id !== item.id && (
@@ -98,6 +116,8 @@ export default function SearchScreen({ navigation }) {
       )}
     </View>
   );
+
+  const displayData = query.trim().length >= 2 ? results : recentUsers;
 
   return (
     <View style={styles.container}>
@@ -120,11 +140,15 @@ export default function SearchScreen({ navigation }) {
 
       {loading && <ActivityIndicator style={{ marginTop: 20 }} color="#8916CB" />}
 
+      {query.trim().length < 2 && recentUsers.length > 0 && (
+        <Text style={styles.sectionTitle}>Suggestions (récemment actifs)</Text>
+      )}
+
       <FlatList
-        data={results}
+        data={displayData}
         keyExtractor={(item) => item.id}
         renderItem={renderItem}
-        contentContainerStyle={{ paddingTop: 10 }}
+        contentContainerStyle={{ paddingTop: 10, paddingBottom: 100 }}
         ListEmptyComponent={
           !loading && query.trim().length >= 2 ? (
             <View style={styles.emptyWrap}>
@@ -160,6 +184,8 @@ const styles = StyleSheet.create({
   rowLeft: { flex: 1, flexDirection: "row", alignItems: "center" },
   avatar: { width: 45, height: 45, borderRadius: 22.5, marginRight: 15, backgroundColor: '#222' },
   name: { color: "#fff", fontSize: 16, fontWeight: '600' },
+  profession: { color: "#888", fontSize: 12, marginTop: 2 },
+  sectionTitle: { color: "#8916CB", fontSize: 12, fontWeight: '800', marginTop: 25, marginBottom: 10, letterSpacing: 1, textTransform: 'uppercase' },
   messageBtn: {
     flexDirection: "row",
     alignItems: "center",

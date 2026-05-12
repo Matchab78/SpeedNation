@@ -20,7 +20,7 @@ router.get('/search', async (req, res) => {
     if (!q) return res.json({ data: [] });
 
     const result = await query(
-      'SELECT id, full_name, avatar_url FROM profiles WHERE full_name ILIKE $1 LIMIT 20',
+      'SELECT id, full_name, avatar_url, profession FROM profiles WHERE full_name ILIKE $1 LIMIT 20',
       [`%${q}%`]
     );
     res.json({ data: result.rows });
@@ -28,6 +28,32 @@ router.get('/search', async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
+
+// Get recent active profiles
+router.get('/recent', async (req, res) => {
+  try {
+    const result = await query(
+      'SELECT id, full_name, avatar_url, profession FROM profiles ORDER BY updated_at DESC LIMIT 10'
+    );
+    res.json({ data: result.rows });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Heartbeat - update activity
+router.post('/heartbeat', async (req, res) => {
+  try {
+    const { user_id } = req.body;
+    if (!user_id) return res.status(400).json({ error: 'User ID required' });
+    
+    await query('UPDATE profiles SET updated_at = NOW() WHERE id = $1', [user_id]);
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 
 // Get profile by ID
 router.get('/:id', async (req, res) => {
