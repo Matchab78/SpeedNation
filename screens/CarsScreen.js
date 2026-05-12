@@ -33,6 +33,12 @@ export default function CarsScreen({ navigation }) {
   const [showEditProfileModal, setShowEditProfileModal] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
   
+  // États pour les followers
+  const [showFollowersModal, setShowFollowersModal] = useState(false);
+  const [followersList, setFollowersList] = useState([]);
+  const [followersLoading, setFollowersLoading] = useState(false);
+  const [followersType, setFollowersType] = useState("followers"); // "followers" or "following"
+  
   const [newCar, setNewCar] = useState({
     name: "", brand: "", model: "", year: "", price_purchased: "", power_hp: "", image_url: "", imageUri: null,
   });
@@ -42,6 +48,27 @@ export default function CarsScreen({ navigation }) {
   const [editProfile, setEditProfile] = useState({
     full_name: "", profession: "", location: "", age: "", avatarUri: null, showAdminRole: true,
   });
+
+  const openFollowersModal = async (type) => {
+    if (!user) return;
+    setFollowersType(type);
+    setFollowersLoading(true);
+    setShowFollowersModal(true);
+    
+    try {
+      const { profilesApi } = require("../services/apiService");
+      const res = type === "followers" 
+        ? await profilesApi.getFollowers(user.id)
+        : await profilesApi.getFollowing(user.id);
+      
+      if (res.data) setFollowersList(res.data);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setFollowersLoading(false);
+    }
+  };
+
 
   useEffect(() => {
     if (user) {
@@ -194,12 +221,65 @@ export default function CarsScreen({ navigation }) {
         <Text style={styles.name}>{profile?.full_name || user?.email}</Text>
         <Text style={styles.info}>{profile?.profession || "Passionné automobile"}</Text>
         <Text style={styles.info}>{profile?.location} {profile?.age ? `• ${profile.age} ans` : ""}</Text>
-        <Text style={styles.followers}>{profile?.followers_count || 0} FOLLOWERS</Text>
+        
+        <View style={styles.followRow}>
+          <TouchableOpacity onPress={() => openFollowersModal("followers")}>
+            <Text style={styles.followers}>{profile?.followers_count || 0} FOLLOWERS</Text>
+          </TouchableOpacity>
+          <View style={styles.followSeparator} />
+          <TouchableOpacity onPress={() => openFollowersModal("following")}>
+            <Text style={styles.followers}>{profile?.following_count || 0} SUIVI</Text>
+          </TouchableOpacity>
+        </View>
 
         {isAdmin && profile?.show_admin_role !== false && (
           <View style={styles.roleBadge}><Text style={styles.roleBadgeText}>Administrateur</Text></View>
         )}
       </View>
+
+      {/* --- MODALE FOLLOWERS/FOLLOWING --- */}
+      <Modal visible={showFollowersModal} animationType="slide" transparent>
+        <View style={styles.modalOverlay}>
+          <View style={styles.followModalContainer}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>
+                {followersType === "followers" ? "Abonnés" : "Abonnements"}
+              </Text>
+              <TouchableOpacity onPress={() => setShowFollowersModal(false)}>
+                <Ionicons name="close" size={24} color="#fff" />
+              </TouchableOpacity>
+            </View>
+
+            {followersLoading ? (
+              <ActivityIndicator color="#8916CB" style={{ margin: 20 }} />
+            ) : (
+              <FlatList
+                data={followersList}
+                keyExtractor={(item) => item.id}
+                renderItem={({ item }) => (
+                  <TouchableOpacity 
+                    style={styles.followItem}
+                    onPress={() => {
+                      setShowFollowersModal(false);
+                      navigation.navigate("UserProfile", { userId: item.id });
+                    }}
+                  >
+                    <Image 
+                      source={{ uri: item.avatar_url ? getImageUrl(item.avatar_url) : `https://ui-avatars.com/api/?name=${encodeURIComponent(item.full_name)}&background=8916CB&color=fff` }} 
+                      style={styles.followAvatar} 
+                    />
+                    <View>
+                      <Text style={styles.followName}>{item.full_name}</Text>
+                      <Text style={styles.followProfession}>{item.profession || "Membre"}</Text>
+                    </View>
+                  </TouchableOpacity>
+                )}
+                ListEmptyComponent={<Text style={styles.emptyText}>Aucun utilisateur trouvé</Text>}
+              />
+            )}
+          </View>
+        </View>
+      </Modal>
 
       {/* --- TABS + BOUTON AJOUTER --- */}
       <View style={styles.tabsRow}>
@@ -313,7 +393,15 @@ const styles = StyleSheet.create({
   avatar: { width: 100, height: 100, borderRadius: 50, marginBottom: 15, borderWidth: 2, borderColor: "#8916CB" },
   name: { color: "#fff", fontSize: 22, fontWeight: "700" },
   info: { color: "#888", fontSize: 14, marginTop: 4 },
-  followers: { color: "#666", fontSize: 11, fontWeight: "800", marginTop: 15, letterSpacing: 1 },
+  followers: { color: "white", fontSize: 13, fontWeight: "bold", letterSpacing: 1 },
+  followRow: { flexDirection: "row", alignItems: "center", marginTop: 15, gap: 15 },
+  followSeparator: { width: 1, height: 12, backgroundColor: "#333" },
+  followModalContainer: { flex: 1, backgroundColor: "#000", marginTop: 60, borderTopLeftRadius: 25, borderTopRightRadius: 25, padding: 20 },
+  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
+  followItem: { flexDirection: "row", alignItems: "center", paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: "#111" },
+  followAvatar: { width: 45, height: 45, borderRadius: 22.5, marginRight: 15 },
+  followName: { color: "#fff", fontSize: 16, fontWeight: "600" },
+  followProfession: { color: "#888", fontSize: 12 },
   roleBadge: { backgroundColor: "#8916CB", paddingHorizontal: 12, paddingVertical: 4, borderRadius: 8, marginTop: 15 },
   roleBadgeText: { color: "#fff", fontSize: 11, fontWeight: "700" },
   tabsRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginVertical: 20, borderBottomWidth: 1, borderBottomColor: "#222", paddingHorizontal: 20, paddingBottom: 10 },
