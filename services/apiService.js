@@ -1,13 +1,23 @@
 export const getImageUrl = (url) => {
   if (!url) return null;
   if (url.startsWith('http')) return url;
+  
+  const base = (typeof window !== 'undefined' && window.location?.origin) 
+    ? window.location.origin 
+    : '';
+
+  // Si c'est déjà un chemin complet commençant par /uploads
   if (url.startsWith('/uploads')) {
-    const base = (typeof window !== 'undefined' && window.location?.origin) 
-      ? window.location.origin 
-      : '';
     return `${base}${url}`;
   }
-  return url;
+
+  // Si c'est un chemin relatif genre "profiles/photo.jpg"
+  if (url.includes('/') && !url.startsWith('/')) {
+    return `${base}/uploads/${url}`;
+  }
+
+  // Fallback : on suppose que c'est dans le dossier uploads général si pas de slash
+  return `${base}/uploads/${url}`;
 };
 
 // Service API pour communiquer avec le backend
@@ -17,11 +27,12 @@ const getApiBaseUrl = () => {
   }
   return 'http://localhost:3000/api';
 };
-const API_BASE_URL = getApiBaseUrl();
+
 
 class ApiService {
   async request(endpoint, options = {}) {
-    const url = `${API_BASE_URL}${endpoint}`;
+    const baseUrl = getApiBaseUrl();
+    const url = `${baseUrl}${endpoint}`;
     
     const isFormData = options.body instanceof FormData;
     
