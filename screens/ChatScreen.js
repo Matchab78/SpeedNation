@@ -12,7 +12,6 @@ import {
   Image,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { supabase } from "../config/supabase";
 import { messagingService } from "../services/messagingService";
 import { useAuth } from "../utils/authContext";
 
@@ -47,42 +46,9 @@ export default function ChatScreen({ route, navigation }) {
     if (!conversationId || !userId) return;
 
     loadMessages();
-    
-    // S'abonner aux nouveaux messages en temps réel
-    const subscription = supabase
-      .channel(`conversation:${conversationId}`)
-      .on('postgres_changes', 
-        { 
-          event: 'INSERT', 
-          schema: 'public', 
-          table: 'messages',
-          filter: `conversation_id=eq.${conversationId}`
-        }, 
-        (payload) => {
-          console.log('Nouveau message reçu:', payload.new);
-          // Ajouter le message immédiatement à la liste (avec dédoublonnage)
-          setMessages((prev) => {
-            const current = prev || [];
-            if (current.some((m) => m.id === payload.new.id)) return current;
-            return [...current, payload.new];
-          });
-          // Auto-scroll vers le bas avec une petite pause pour l'animation
-          setTimeout(() => {
-            flatListRef.current?.scrollToEnd({ animated: true });
-          }, 100);
-        }
-      )
-      .subscribe((status) => {
-        console.log('Status abonnement messages:', status);
-      });
 
-    // Marquer les messages comme lus
+    // Marquer les messages comme lus (via API VPS)
     messagingService.markMessagesAsRead(conversationId, userId);
-
-    return () => {
-      console.log('Nettoyage abonnement messages');
-      subscription?.unsubscribe();
-    };
   }, [conversationId, userId]);
 
   useEffect(() => {
@@ -100,13 +66,15 @@ export default function ChatScreen({ route, navigation }) {
           const prevLast = prev[prev.length - 1];
           const incomingLast = incoming[incoming.length - 1];
           if (!incomingLast) return prev;
+          
+          // Comparaison plus robuste pour éviter les re-renders inutiles
           if (prevLast?.id === incomingLast.id && prev.length === incoming.length) return prev;
           return incoming;
         });
-      } catch {
-        // no-op
+      } catch (err) {
+        console.warn('Polling error:', err);
       }
-    }, 2000);
+    }, 3000);
 
     return () => clearInterval(intervalId);
   }, [conversationId, userId]);
@@ -178,12 +146,17 @@ export default function ChatScreen({ route, navigation }) {
         return;
       }
       
-      // Remplacer le message optimiste par le vrai message
-      setMessages(prev => 
-        prev.map(msg => 
-          msg.id === optimisticMessage.id ? result.message : msg
-        )
-      );
+      // Remplacer le message optimiste par le vrai message renvoyé par le VPS
+      if (result.message) {
+        setMessages(prev => 
+          prev.map(msg => 
+            msg.id === optimisticMessage.id ? result.message : msg
+          )
+        );
+      } else {
+        // Si pas de retour direct, on laisse le message optimiste (le prochain poll le remplacera)
+        console.log('Message envoyé, en attente de confirmation du serveur');
+      }
       
       console.log('Message envoyé avec succès:', result.message);
     } catch (error) {

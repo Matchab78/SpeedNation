@@ -5,6 +5,7 @@ export const messagingService = {
   async getUserConversations(userId) {
     try {
       const { data } = await messagingApi.getConversations(userId);
+      if (!data || !Array.isArray(data)) return { data: [], error: null };
       const formattedData = data.map(conv => {
         const isParticipant1 = conv.participant1_id === userId;
         return {
@@ -89,15 +90,15 @@ export const messagingService = {
     return { success: false };
   },
 
-  // S'abonner aux messages d'une conversation en temps réel (non implémenté)
+  // S'abonner aux messages d'une conversation en temps réel (via VPS)
   subscribeToMessages(conversationId, callback) {
-    // Non implémenté - le backend ne supporte pas WebSocket pour l'instant
+    // Non implémenté - utilise le polling du frontend pour l'instant
     return null;
   },
 
-  // S'abonner aux conversations d'un utilisateur en temps réel (non implémenté)
+  // S'abonner aux conversations d'un utilisateur en temps réel (via VPS)
   subscribeToConversations(userId, callback) {
-    // Non implémenté - le backend ne supporte pas WebSocket pour l'instant
+    // Non implémenté - utilise le polling du frontend pour l'instant
     return null;
   }
 };

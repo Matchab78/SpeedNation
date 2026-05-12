@@ -25,16 +25,6 @@ export default function ChatListScreen({ navigation }) {
   useEffect(() => {
     if (!user) return;
     loadConversations();
-    
-    // S'abonner aux nouvelles conversations/messages
-    const subscription = messagingService.subscribeToConversations(
-      user.id, 
-      () => loadConversations()
-    );
-
-    return () => {
-      subscription?.unsubscribe();
-    };
   }, [userId]);
 
   useEffect(() => {
@@ -42,7 +32,7 @@ export default function ChatListScreen({ navigation }) {
 
     const intervalId = setInterval(() => {
       loadConversations();
-    }, 5000);
+    }, 4000); // Polling toutes les 4s pour la liste
 
     return () => clearInterval(intervalId);
   }, [userId]);
@@ -171,7 +161,7 @@ export default function ChatListScreen({ navigation }) {
               )}
               <View style={styles.chatInfo}>
                 <Text style={styles.chatName}>
-                  {item.isGroup ? item.groupName : item.otherUser?.full_name || 'Utilisateur inconnu'}
+                  {item.is_group ? item.group_name : item.otherUser?.full_name || 'Utilisateur inconnu'}
                 </Text>
                 <Text style={styles.chatLastMsg}>
                   {formatLastMessage(item.lastMessage)}
