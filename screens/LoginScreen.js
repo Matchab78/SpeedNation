@@ -117,13 +117,13 @@ export default function LoginScreen({ navigation }) {
 
       if (data?.user) {
         Alert.alert(
-          "Compte créé !",
-          "Ton compte a été créé avec succès. Tu peux maintenant te connecter.",
+          "Bienvenue !",
+          "Ton compte a été créé et tu es maintenant connecté.",
           [
             {
-              text: "Se connecter",
+              text: "C'est parti",
               onPress: () => {
-                setIsSignUpMode(false);
+                navigation.goBack();
               },
             },
           ]

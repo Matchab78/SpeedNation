@@ -69,7 +69,7 @@ export default function ChatListScreen({ navigation }) {
         console.error('Erreur chargement conversations:', result.error);
         return;
       }
-      setConversations(result);
+      setConversations(result.data || []);
     } catch (error) {
       console.error('Erreur loadConversations:', error);
     } finally {

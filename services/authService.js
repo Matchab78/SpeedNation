@@ -15,7 +15,8 @@ export const authService = {
       
       const user = response?.data;
       if (user) {
-        return { data: { user }, error: null };
+        // Auto-login after sign-up
+        return await this.signIn(email, password);
       }
       return { data: null, error: new Error('Réponse invalide du serveur') };
     } catch (error) {

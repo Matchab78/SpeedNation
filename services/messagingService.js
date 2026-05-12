@@ -5,7 +5,19 @@ export const messagingService = {
   async getUserConversations(userId) {
     try {
       const { data } = await messagingApi.getConversations(userId);
-      return { data, error: null };
+      const formattedData = data.map(conv => {
+        const isParticipant1 = conv.participant1_id === userId;
+        return {
+          ...conv,
+          otherUser: {
+            id: isParticipant1 ? conv.participant2_id : conv.participant1_id,
+            full_name: isParticipant1 ? conv.participant2_name : conv.participant1_name,
+            avatar_url: isParticipant1 ? conv.participant2_avatar : conv.participant1_avatar
+          },
+          lastMessage: conv.last_message || null
+        };
+      });
+      return { data: formattedData, error: null };
     } catch (error) {
       console.error('Erreur getUserConversations:', error);
       return { data: null, error };

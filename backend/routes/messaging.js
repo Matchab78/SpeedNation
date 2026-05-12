@@ -11,7 +11,17 @@ router.get('/conversations', async (req, res) => {
     const result = await query(`
       SELECT c.*, 
         p1.full_name as participant1_name, p1.avatar_url as participant1_avatar,
-        p2.full_name as participant2_name, p2.avatar_url as participant2_avatar
+        p2.full_name as participant2_name, p2.avatar_url as participant2_avatar,
+        (
+          SELECT json_build_object(
+            'content', m.content,
+            'created_at', m.created_at
+          )
+          FROM messages m
+          WHERE m.conversation_id = c.id
+          ORDER BY m.created_at DESC
+          LIMIT 1
+        ) as last_message
       FROM conversations c
       LEFT JOIN profiles p1 ON c.participant1_id = p1.id
       LEFT JOIN profiles p2 ON c.participant2_id = p2.id
