@@ -14,7 +14,6 @@ import {
 } from "react-native";
 import { authService } from "../services/authService";
 
-// Alerte compatible web et mobile
 const showAlert = (title, message) => {
   if (Platform.OS === "web") {
     window.alert(`${title}\n${message}`);
@@ -30,46 +29,34 @@ export default function LoginScreen({ navigation }) {
   const [isSignUpMode, setIsSignUpMode] = useState(false);
 
   const goHome = () => {
-    navigation.reset({
-      index: 0,
-      routes: [{ name: "Tabs", params: { screen: "Home" } }],
-    });
+    setTimeout(() => {
+      navigation.reset({
+        index: 0,
+        routes: [{ name: "Tabs" }],
+      });
+    }, 100);
   };
 
   const handleLogin = async () => {
-    if (!email.trim()) {
-      showAlert("Erreur", "Veuillez entrer votre email");
-      return;
-    }
-    if (!password.trim()) {
-      showAlert("Erreur", "Veuillez entrer votre mot de passe");
-      return;
-    }
+    if (!email.trim()) { showAlert("Erreur", "Veuillez entrer votre email"); return; }
+    if (!password.trim()) { showAlert("Erreur", "Veuillez entrer votre mot de passe"); return; }
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      showAlert("Erreur", "Veuillez entrer un email valide");
-      return;
-    }
+    if (!emailRegex.test(email)) { showAlert("Erreur", "Veuillez entrer un email valide"); return; }
 
     setLoading(true);
     try {
       const { error } = await authService.signIn(email.trim(), password);
 
       if (error) {
-        let errorMessage = "Erreur de connexion";
-        if (error.message.includes("Invalid login credentials")) {
-          errorMessage = "Email ou mot de passe incorrect";
-        } else if (error.message.includes("Email not confirmed")) {
-          errorMessage = "Veuillez confirmer votre email avant de vous connecter";
-        } else {
-          errorMessage = error.message || "Une erreur est survenue";
-        }
-        showAlert("Erreur", errorMessage);
+        let msg = "Erreur de connexion";
+        if (error.message?.includes("Invalid login credentials")) msg = "Email ou mot de passe incorrect";
+        else if (error.message?.includes("Email not confirmed")) msg = "Veuillez confirmer votre email";
+        else msg = error.message || "Une erreur est survenue";
+        showAlert("Erreur", msg);
         return;
       }
 
       goHome();
-
     } catch (e) {
       showAlert("Erreur", "Une erreur inattendue est survenue");
       console.error("Erreur de connexion:", e);
@@ -79,23 +66,11 @@ export default function LoginScreen({ navigation }) {
   };
 
   const handleSignUp = async () => {
-    if (!email.trim()) {
-      showAlert("Erreur", "Veuillez entrer votre email");
-      return;
-    }
-    if (!password.trim()) {
-      showAlert("Erreur", "Veuillez entrer un mot de passe");
-      return;
-    }
+    if (!email.trim()) { showAlert("Erreur", "Veuillez entrer votre email"); return; }
+    if (!password.trim()) { showAlert("Erreur", "Veuillez entrer un mot de passe"); return; }
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      showAlert("Erreur", "Veuillez entrer un email valide");
-      return;
-    }
-    if (password.length < 6) {
-      showAlert("Erreur", "Le mot de passe doit contenir au moins 6 caractères");
-      return;
-    }
+    if (!emailRegex.test(email)) { showAlert("Erreur", "Veuillez entrer un email valide"); return; }
+    if (password.length < 6) { showAlert("Erreur", "Le mot de passe doit contenir au moins 6 caractères"); return; }
 
     setLoading(true);
     try {
@@ -107,7 +82,6 @@ export default function LoginScreen({ navigation }) {
       }
 
       goHome();
-
     } catch (e) {
       showAlert("Erreur", "Une erreur inattendue est survenue");
       console.error("Erreur d'inscription:", e);
@@ -117,24 +91,15 @@ export default function LoginScreen({ navigation }) {
   };
 
   const handleForgotPassword = async () => {
-    if (!email.trim()) {
-      showAlert("Email requis", "Renseigne ton email puis clique de nouveau sur \"Mot de passe oublié ?\".");
-      return;
-    }
+    if (!email.trim()) { showAlert("Email requis", "Renseigne ton email puis réessaie."); return; }
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      showAlert("Erreur", "Veuillez entrer un email valide");
-      return;
-    }
+    if (!emailRegex.test(email)) { showAlert("Erreur", "Veuillez entrer un email valide"); return; }
 
     setLoading(true);
     try {
       const { error } = await authService.resetPassword(email.trim());
-      if (error) {
-        showAlert("Erreur", error.message || "Impossible d'envoyer l'email de réinitialisation");
-        return;
-      }
-      showAlert("Email envoyé", "Si un compte existe avec cet email, un lien de réinitialisation a été envoyé.");
+      if (error) { showAlert("Erreur", error.message || "Impossible d'envoyer l'email"); return; }
+      showAlert("Email envoyé", "Un lien de réinitialisation a été envoyé si le compte existe.");
     } catch (e) {
       showAlert("Erreur", "Une erreur inattendue est survenue");
     } finally {
@@ -239,103 +204,22 @@ export default function LoginScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  background: {
-    flex: 1,
-  },
-  overlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.55)",
-  },
-  scrollContent: {
-    flexGrow: 1,
-    paddingHorizontal: 24,
-    paddingTop: 60,
-    paddingBottom: 40,
-  },
-  header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 40,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: "bold",
-    color: "white",
-  },
-  backButton: {
-    paddingVertical: 6,
-    paddingHorizontal: 14,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: "white",
-    backgroundColor: "rgba(0,0,0,0.4)",
-  },
-  backText: {
-    color: "white",
-    fontWeight: "500",
-  },
-  card: {
-    backgroundColor: "rgba(0,0,0,0.75)",
-    borderRadius: 18,
-    padding: 20,
-    marginTop: 40,
-  },
-  cardTitle: {
-    fontSize: 22,
-    fontWeight: "600",
-    color: "white",
-    marginBottom: 20,
-  },
-  input: {
-    backgroundColor: "#111",
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    color: "white",
-    marginBottom: 14,
-    borderWidth: 1,
-    borderColor: "#333",
-  },
-  loginButton: {
-    backgroundColor: "#000000ff",
-    paddingVertical: 12,
-    borderRadius: 20,
-    alignItems: "center",
-    marginTop: 10,
-  },
-  loginButtonDisabled: {
-    opacity: 0.6,
-  },
-  loginButtonText: {
-    color: "white",
-    fontWeight: "600",
-    fontSize: 16,
-  },
-  forgotPasswordButton: {
-    marginTop: 14,
-    alignItems: "center",
-  },
-  forgotPasswordText: {
-    color: "#cccccc",
-    fontSize: 14,
-    textDecorationLine: "underline",
-  },
-  switchAuthRow: {
-    flexDirection: "row",
-    justifyContent: "center",
-    alignItems: "center",
-    marginTop: 18,
-  },
-  switchAuthText: {
-    color: "#cccccc",
-    fontSize: 14,
-    marginRight: 6,
-  },
-  switchAuthLink: {
-    color: "#ffffff",
-    fontSize: 14,
-    fontWeight: "600",
-    textDecorationLine: "underline",
-  },
+  background: { flex: 1 },
+  overlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.55)" },
+  scrollContent: { flexGrow: 1, paddingHorizontal: 24, paddingTop: 60, paddingBottom: 40 },
+  header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 40 },
+  title: { fontSize: 28, fontWeight: "bold", color: "white" },
+  backButton: { paddingVertical: 6, paddingHorizontal: 14, borderRadius: 20, borderWidth: 1, borderColor: "white", backgroundColor: "rgba(0,0,0,0.4)" },
+  backText: { color: "white", fontWeight: "500" },
+  card: { backgroundColor: "rgba(0,0,0,0.75)", borderRadius: 18, padding: 20, marginTop: 40 },
+  cardTitle: { fontSize: 22, fontWeight: "600", color: "white", marginBottom: 20 },
+  input: { backgroundColor: "#111", borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10, color: "white", marginBottom: 14, borderWidth: 1, borderColor: "#333" },
+  loginButton: { backgroundColor: "#000000ff", paddingVertical: 12, borderRadius: 20, alignItems: "center", marginTop: 10 },
+  loginButtonDisabled: { opacity: 0.6 },
+  loginButtonText: { color: "white", fontWeight: "600", fontSize: 16 },
+  forgotPasswordButton: { marginTop: 14, alignItems: "center" },
+  forgotPasswordText: { color: "#cccccc", fontSize: 14, textDecorationLine: "underline" },
+  switchAuthRow: { flexDirection: "row", justifyContent: "center", alignItems: "center", marginTop: 18 },
+  switchAuthText: { color: "#cccccc", fontSize: 14, marginRight: 6 },
+  switchAuthLink: { color: "#ffffff", fontSize: 14, fontWeight: "600", textDecorationLine: "underline" },
 });
