@@ -27,8 +27,8 @@ app.use((req, res, next) => {
 
 const path = require('path');
 
-// Serve static files from the uploads directory
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+// Serve static files from the uploads directory using absolute path for Docker
+app.use('/uploads', express.static('/app/uploads'));
 
 // Routes
 app.use('/api/auth', require('./routes/auth'));
