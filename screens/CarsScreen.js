@@ -101,6 +101,26 @@ export default function CarsScreen({ navigation }) {
     }
   };
 
+  const confirmDeleteCar = async () => {
+    if (!carToDelete) return;
+    setShowDeleteCarModal(false);
+    try {
+      const { error } = await carService.deleteCar(carToDelete.id, user.id);
+      if (error) {
+        console.error('Erreur suppression voiture:', error);
+        Alert.alert('Erreur', 'Impossible de supprimer la voiture');
+        return;
+      }
+      // Mise à jour instantanée de la liste locale
+      setCars(prev => prev.filter(c => c.id !== carToDelete.id));
+    } catch (e) {
+      console.error(e);
+      Alert.alert('Erreur', 'Une erreur inattendue est survenue');
+    } finally {
+      setCarToDelete(null);
+    }
+  };
+
   const pickImage = async (mode, type = 'newCar') => {
     try {
       const result = mode === 'gallery' 
@@ -206,6 +226,8 @@ export default function CarsScreen({ navigation }) {
 
   const [showActionMenu, setShowActionMenu] = useState(false);
   const [selectedCar, setSelectedCar] = useState(null);
+  const [showDeleteCarModal, setShowDeleteCarModal] = useState(false);
+  const [carToDelete, setCarToDelete] = useState(null);
 
   const renderCarCard = ({ item }) => (
     <View style={styles.carCard}>
@@ -299,17 +321,8 @@ export default function CarsScreen({ navigation }) {
               style={[styles.actionButton, { borderBottomWidth: 0 }]}
               onPress={() => {
                 setShowActionMenu(false);
-                Alert.alert(
-                  "Supprimer",
-                  "Voulez-vous vraiment supprimer cette voiture ?",
-                  [
-                    { text: "Annuler", style: "cancel" },
-                    { text: "Supprimer", style: "destructive", onPress: async () => {
-                        await carService.deleteCar(selectedCar.id, user.id);
-                        loadCars();
-                    }}
-                  ]
-                );
+                setCarToDelete(selectedCar);
+                setShowDeleteCarModal(true);
               }}
             >
               <Ionicons name="trash-outline" size={20} color="#f97373" />
@@ -319,6 +332,26 @@ export default function CarsScreen({ navigation }) {
             <TouchableOpacity style={styles.actionCancelButton} onPress={() => setShowActionMenu(false)}>
               <Text style={styles.actionCancelText}>Annuler</Text>
             </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* --- MODALE CONFIRMATION SUPPRESSION VOITURE --- */}
+      <Modal visible={showDeleteCarModal} transparent animationType="fade" onRequestClose={() => setShowDeleteCarModal(false)}>
+        <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setShowDeleteCarModal(false)}>
+          <View style={styles.deleteCarModalBox}>
+            <Text style={styles.deleteCarModalTitle}>Supprimer la voiture</Text>
+            <Text style={styles.deleteCarModalText}>
+              Voulez-vous vraiment supprimer "{carToDelete?.name}" ?{"\n"}Cette action est définitive.
+            </Text>
+            <View style={styles.deleteCarModalActions}>
+              <TouchableOpacity style={styles.deleteCarCancel} onPress={() => setShowDeleteCarModal(false)}>
+                <Text style={styles.deleteCarCancelText}>Annuler</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.deleteCarConfirm} onPress={confirmDeleteCar}>
+                <Text style={styles.deleteCarConfirmText}>Supprimer</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </TouchableOpacity>
       </Modal>
@@ -638,5 +671,60 @@ const styles = StyleSheet.create({
     color: COLORS.mutedForeground,
     fontSize: 15,
     fontWeight: "700",
+  },
+
+  /* --- MODAL SUPPRESSION VOITURE --- */
+  deleteCarModalBox: {
+    backgroundColor: COLORS.surface,
+    borderRadius: 24,
+    padding: 28,
+    marginHorizontal: 30,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    width: "90%",
+    maxWidth: 400,
+  },
+  deleteCarModalTitle: {
+    color: COLORS.foreground,
+    fontSize: 20,
+    fontWeight: "700",
+    marginBottom: 12,
+    textAlign: "center",
+  },
+  deleteCarModalText: {
+    color: COLORS.mutedForeground,
+    fontSize: 14,
+    textAlign: "center",
+    lineHeight: 21,
+    marginBottom: 24,
+  },
+  deleteCarModalActions: {
+    flexDirection: "row",
+    gap: 12,
+  },
+  deleteCarCancel: {
+    flex: 1,
+    paddingVertical: 13,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    alignItems: "center",
+  },
+  deleteCarCancelText: {
+    color: COLORS.mutedForeground,
+    fontWeight: "700",
+    fontSize: 14,
+  },
+  deleteCarConfirm: {
+    flex: 1,
+    paddingVertical: 13,
+    borderRadius: 999,
+    backgroundColor: "#991b1b",
+    alignItems: "center",
+  },
+  deleteCarConfirmText: {
+    color: "#fecaca",
+    fontWeight: "700",
+    fontSize: 14,
   },
 });

@@ -4,11 +4,11 @@ import {
   Text, 
   StyleSheet, 
   TouchableOpacity, 
-  FlatList,
   ScrollView,
   ImageBackground,
   ActivityIndicator,
   Alert,
+  Modal,
 } from "react-native";
 import { Image } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
@@ -16,13 +16,22 @@ import { eventService } from "../services/eventService";
 import { useAuth } from "../utils/authContext";
 import { getImageUrl } from "../services/apiService";
 
-export default function EventsScreen({ navigation }) {
+export default function EventsScreen({ navigation, route }) {
   const { user, isAdmin } = useAuth();
 
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [favoriteIds, setFavoriteIds] = useState([]);
   const [refreshTick, setRefreshTick] = useState(0);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [eventToDelete, setEventToDelete] = useState(null);
+
+  // Recharger quand on revient de EventFormScreen avec un param refresh
+  useEffect(() => {
+    if (route?.params?.refresh) {
+      setRefreshTick((prev) => prev + 1);
+    }
+  }, [route?.params?.refresh]);
 
   useEffect(() => {
     const fetchEvents = async () => {
@@ -99,36 +108,27 @@ export default function EventsScreen({ navigation }) {
 
   const handleDeleteEvent = (event) => {
     if (!isAdmin) return;
+    setEventToDelete(event);
+    setShowDeleteModal(true);
+  };
 
-    Alert.alert(
-      "Supprimer l'événement",
-      `Es-tu sûr de vouloir supprimer "${event.title}" ? Cette action est définitive.`,
-      [
-        { text: "Annuler", style: "cancel" },
-        {
-          text: "Supprimer",
-          style: "destructive",
-          onPress: async () => {
-            try {
-              const { error } = await eventService.deleteEvent(event.id, user.id);
-              if (error) {
-                console.error("Erreur deleteEvent:", error);
-                Alert.alert(
-                  "Erreur",
-                  error.message || "Impossible de supprimer l'événement"
-                );
-                return;
-              }
-
-              setEvents((prev) => prev.filter((e) => e.id !== event.id));
-            } catch (err) {
-              console.error("Erreur inattendue deleteEvent:", err);
-              Alert.alert("Erreur", "Une erreur inattendue est survenue");
-            }
-          },
-        },
-      ]
-    );
+  const confirmDeleteEvent = async () => {
+    if (!eventToDelete) return;
+    setShowDeleteModal(false);
+    try {
+      const { error } = await eventService.deleteEvent(eventToDelete.id, user.id);
+      if (error) {
+        console.error("Erreur deleteEvent:", error);
+        Alert.alert("Erreur", error.message || "Impossible de supprimer l'événement");
+        return;
+      }
+      setEvents((prev) => prev.filter((e) => e.id !== eventToDelete.id));
+    } catch (err) {
+      console.error("Erreur inattendue deleteEvent:", err);
+      Alert.alert("Erreur", "Une erreur inattendue est survenue");
+    } finally {
+      setEventToDelete(null);
+    }
   };
 
   const handleSetFeatured = async (event) => {
@@ -304,6 +304,33 @@ export default function EventsScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
+      {/* --- MODALE CONFIRMATION SUPPRESSION --- */}
+      <Modal visible={showDeleteModal} transparent animationType="fade" onRequestClose={() => setShowDeleteModal(false)}>
+        <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setShowDeleteModal(false)}>
+          <View style={styles.deleteModalBox}>
+            <Text style={styles.deleteModalTitle}>Supprimer l'événement</Text>
+            <Text style={styles.deleteModalText}>
+              Es-tu sûr de vouloir supprimer "{eventToDelete?.title}" ?
+              {"\n"}Cette action est définitive.
+            </Text>
+            <View style={styles.deleteModalActions}>
+              <TouchableOpacity
+                style={styles.deleteModalCancel}
+                onPress={() => setShowDeleteModal(false)}
+              >
+                <Text style={styles.deleteModalCancelText}>Annuler</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.deleteModalConfirm}
+                onPress={confirmDeleteEvent}
+              >
+                <Text style={styles.deleteModalConfirmText}>Supprimer</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
       {loading ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator color="#ffffff" size="large" />
@@ -570,6 +597,67 @@ const styles = StyleSheet.create({
     color: COLORS.mutedForeground,
     textAlign: "center",
     marginTop: 40,
+    fontSize: 14,
+  },
+
+  /* --- DELETE MODAL --- */
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.8)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  deleteModalBox: {
+    backgroundColor: COLORS.surface,
+    borderRadius: 24,
+    padding: 28,
+    marginHorizontal: 30,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    width: "90%",
+    maxWidth: 400,
+  },
+  deleteModalTitle: {
+    color: COLORS.foreground,
+    fontSize: 20,
+    fontWeight: "700",
+    marginBottom: 12,
+    textAlign: "center",
+  },
+  deleteModalText: {
+    color: COLORS.mutedForeground,
+    fontSize: 14,
+    textAlign: "center",
+    lineHeight: 21,
+    marginBottom: 24,
+  },
+  deleteModalActions: {
+    flexDirection: "row",
+    gap: 12,
+  },
+  deleteModalCancel: {
+    flex: 1,
+    paddingVertical: 13,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    alignItems: "center",
+  },
+  deleteModalCancelText: {
+    color: COLORS.mutedForeground,
+    fontWeight: "700",
+    fontSize: 14,
+  },
+  deleteModalConfirm: {
+    flex: 1,
+    paddingVertical: 13,
+    borderRadius: 999,
+    backgroundColor: "#991b1b",
+    alignItems: "center",
+  },
+  deleteModalConfirmText: {
+    color: "#fecaca",
+    fontWeight: "700",
     fontSize: 14,
   },
 

@@ -142,9 +142,7 @@ export default function EventFormScreen({ navigation, route }) {
       }
 
       // Retour + refresh
-      if (navigation.canGoBack()) {
-        navigation.goBack(); // Retour à l'écran précédent (EventsScreen)
-      }
+      navigation.navigate("Events", { refresh: Date.now() });
     } catch (err) {
       console.error("Erreur save EventFormScreen:", err);
       Alert.alert("Erreur", "Une erreur inattendue est survenue");
