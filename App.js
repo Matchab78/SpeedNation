@@ -3,7 +3,7 @@ import { NavigationContainer } from '@react-navigation/native';
 import { AuthProvider } from './utils/authContext';
 import StackNavigator from './navigation/StackNavigator';
 
-import { StatusBar } from 'expo-status-bar';
+import { StatusBar } from 'react-native';
 import { DefaultTheme } from '@react-navigation/native';
 
 const MyTheme = {
@@ -18,7 +18,7 @@ export default function App() {
   return (
     <AuthProvider>
       <NavigationContainer theme={MyTheme}>
-        <StatusBar style="light" />
+        <StatusBar barStyle="light-content" backgroundColor="#0B0813" />
         <StackNavigator />
       </NavigationContainer>
     </AuthProvider>
