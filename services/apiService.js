@@ -111,6 +111,9 @@ export const authApi = {
 
   getUser: (userId) =>
     apiService.get(`/auth/user/${userId}`),
+
+  changePassword: (userId, newPassword) =>
+    apiService.post('/auth/change-password', { user_id: userId, new_password: newPassword }),
 };
 
 // Cars API
@@ -170,6 +173,8 @@ export const adminApi = {
     apiService.put(`/admin/events/${id}/feature`, { is_featured: isFeatured }),
   deleteUser: (id) => apiService.delete(`/admin/users/${id}`),
   updateUserRole: (id, role) => apiService.put(`/admin/users/${id}/role`, { role }),
+  resetUserPassword: (id, temporaryPassword) => 
+    apiService.post(`/admin/users/${id}/reset-password`, { temporary_password: temporaryPassword }),
 };
 
 export const profilesApi = {

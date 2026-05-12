@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const bcrypt = require('bcryptjs');
 const { query } = require('../config/database');
 
 // Middleware to check if user is admin (simplified for now, since we don't have JWT yet, 
@@ -138,6 +139,30 @@ router.delete('/users/:id', async (req, res) => {
     res.json({ message: 'User and all associated data deleted successfully' });
   } catch (error) {
     console.error('Delete user error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Reset user password (admin only)
+router.post('/users/:id/reset-password', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { temporary_password } = req.body;
+    
+    if (!temporary_password) {
+      return res.status(400).json({ error: 'Temporary password is required' });
+    }
+
+    const passwordHash = await bcrypt.hash(temporary_password, 10);
+    
+    await query(
+      'UPDATE users SET password_hash = $1, must_change_password = true, updated_at = NOW() WHERE id = $2',
+      [passwordHash, id]
+    );
+
+    res.json({ message: 'Mot de passe réinitialisé. L\'utilisateur devra le changer à la prochaine connexion.' });
+  } catch (error) {
+    console.error('Reset password error:', error);
     res.status(500).json({ error: error.message });
   }
 });

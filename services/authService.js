@@ -135,6 +135,33 @@ export const authService = {
   },
 
   /**
+   * Changer le mot de passe
+   */
+  async changePassword(userId, newPassword) {
+    try {
+      const response = await authApi.changePassword(userId, newPassword);
+      return { success: true, message: response.message };
+    } catch (error) {
+      console.error('authService.changePassword error:', error);
+      return { success: false, error };
+    }
+  },
+
+  /**
+   * Réinitialisation admin (réservé aux admins)
+   */
+  async adminResetPassword(userId, temporaryPassword) {
+    try {
+      const { adminApi } = require('./apiService');
+      await adminApi.resetUserPassword(userId, temporaryPassword);
+      return { success: true };
+    } catch (error) {
+      console.error('authService.adminResetPassword error:', error);
+      return { success: false, error };
+    }
+  },
+
+  /**
    * Demander une réinitialisation de mot de passe
    */
   async resetPassword(email) {

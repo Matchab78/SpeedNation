@@ -25,8 +25,12 @@ const showAlert = (title, message) => {
 export default function LoginScreen({ navigation }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [isSignUpMode, setIsSignUpMode] = useState(false);
+  const [step, setStep] = useState("login"); // login, reset
+  const [tempUserId, setTempUserId] = useState(null);
 
   const goHome = () => {
     setTimeout(() => {
@@ -45,14 +49,20 @@ export default function LoginScreen({ navigation }) {
 
     setLoading(true);
     try {
-      const { error } = await authService.signIn(email.trim(), password);
+      const { data, error } = await authService.signIn(email.trim(), password);
 
       if (error) {
         let msg = "Erreur de connexion";
-        if (error.message?.includes("Invalid login credentials")) msg = "Email ou mot de passe incorrect";
-        else if (error.message?.includes("Email not confirmed")) msg = "Veuillez confirmer votre email";
+        if (error.message?.includes("Identifiants invalides")) msg = "Email ou mot de passe incorrect";
         else msg = error.message || "Une erreur est survenue";
         showAlert("Erreur", msg);
+        return;
+      }
+
+      if (data?.user?.must_change_password) {
+        setTempUserId(data.user.id);
+        setStep("reset");
+        showAlert("Sécurité", "Votre mot de passe a été réinitialisé. Veuillez en créer un nouveau.");
         return;
       }
 
@@ -64,6 +74,30 @@ export default function LoginScreen({ navigation }) {
       setLoading(false);
     }
   };
+
+  const handleChangePassword = async () => {
+    if (newPassword.length < 6) { showAlert("Erreur", "Le mot de passe doit faire au moins 6 caractères"); return; }
+    if (newPassword !== confirmPassword) { showAlert("Erreur", "Les mots de passe ne correspondent pas"); return; }
+
+    setLoading(true);
+    try {
+      const { success, error } = await authService.changePassword(tempUserId, newPassword);
+      if (success) {
+        showAlert("Succès", "Mot de passe mis à jour ! Connectez-vous maintenant.");
+        setStep("login");
+        setPassword("");
+        setNewPassword("");
+        setConfirmPassword("");
+      } else {
+        showAlert("Erreur", error.message || "Impossible de changer le mot de passe");
+      }
+    } catch (e) {
+      showAlert("Erreur", "Une erreur est survenue");
+    } finally {
+      setLoading(false);
+    }
+  };
+
 
   const handleSignUp = async () => {
     if (!email.trim()) { showAlert("Erreur", "Veuillez entrer votre email"); return; }
@@ -132,71 +166,122 @@ export default function LoginScreen({ navigation }) {
 
           <View style={styles.card}>
             <Text style={styles.cardTitle}>
-              {isSignUpMode ? "Créer un compte" : "Connexion"}
+              {step === "reset" ? "Nouveau mot de passe" : (isSignUpMode ? "Créer un compte" : "Connexion")}
             </Text>
 
-            <TextInput
-              placeholder="Email"
-              placeholderTextColor="#888"
-              keyboardType="email-address"
-              autoCapitalize="none"
-              autoCorrect={false}
-              value={email}
-              onChangeText={setEmail}
-              editable={!loading}
-              returnKeyType="next"
-              style={styles.input}
-            />
+            {step === "login" ? (
+              <>
+                <TextInput
+                  placeholder="Email"
+                  placeholderTextColor="#888"
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  value={email}
+                  onChangeText={setEmail}
+                  editable={!loading}
+                  returnKeyType="next"
+                  style={styles.input}
+                />
 
-            <TextInput
-              placeholder="Mot de passe"
-              placeholderTextColor="#888"
-              secureTextEntry
-              autoCapitalize="none"
-              autoCorrect={false}
-              value={password}
-              onChangeText={setPassword}
-              editable={!loading}
-              onSubmitEditing={isSignUpMode ? handleSignUp : handleLogin}
-              returnKeyType="done"
-              style={styles.input}
-            />
+                <TextInput
+                  placeholder="Mot de passe"
+                  placeholderTextColor="#888"
+                  secureTextEntry
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  value={password}
+                  onChangeText={setPassword}
+                  editable={!loading}
+                  onSubmitEditing={isSignUpMode ? handleSignUp : handleLogin}
+                  returnKeyType="done"
+                  style={styles.input}
+                />
 
-            <TouchableOpacity
-              style={[styles.loginButton, loading && styles.loginButtonDisabled]}
-              onPress={isSignUpMode ? handleSignUp : handleLogin}
-              disabled={loading}
-            >
-              {loading ? (
-                <ActivityIndicator color="white" />
-              ) : (
-                <Text style={styles.loginButtonText}>
-                  {isSignUpMode ? "Créer un compte" : "Se connecter"}
+                <TouchableOpacity
+                  style={[styles.loginButton, loading && styles.loginButtonDisabled]}
+                  onPress={isSignUpMode ? handleSignUp : handleLogin}
+                  disabled={loading}
+                >
+                  {loading ? (
+                    <ActivityIndicator color="white" />
+                  ) : (
+                    <Text style={styles.loginButtonText}>
+                      {isSignUpMode ? "Créer un compte" : "Se connecter"}
+                    </Text>
+                  )}
+                </TouchableOpacity>
+
+                {!isSignUpMode && (
+                  <TouchableOpacity
+                    onPress={handleForgotPassword}
+                    disabled={loading}
+                    style={styles.forgotPasswordButton}
+                  >
+                    <Text style={styles.forgotPasswordText}>Mot de passe oublié ?</Text>
+                  </TouchableOpacity>
+                )}
+
+                <View style={styles.switchAuthRow}>
+                  <Text style={styles.switchAuthText}>
+                    {isSignUpMode ? "Vous avez déjà un compte ?" : "Pas encore de compte ?"}
+                  </Text>
+                  <TouchableOpacity onPress={() => setIsSignUpMode((prev) => !prev)} disabled={loading}>
+                    <Text style={styles.switchAuthLink}>
+                      {isSignUpMode ? "Se connecter" : "Créer un compte"}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </>
+            ) : (
+              <>
+                <Text style={{ color: "#aaa", marginBottom: 15, fontSize: 13 }}>
+                  Veuillez définir un nouveau mot de passe pour sécuriser votre compte.
                 </Text>
-              )}
-            </TouchableOpacity>
+                
+                <TextInput
+                  placeholder="Nouveau mot de passe"
+                  placeholderTextColor="#888"
+                  secureTextEntry
+                  value={newPassword}
+                  onChangeText={setNewPassword}
+                  editable={!loading}
+                  style={styles.input}
+                />
 
-            {!isSignUpMode && (
-              <TouchableOpacity
-                onPress={handleForgotPassword}
-                disabled={loading}
-                style={styles.forgotPasswordButton}
-              >
-                <Text style={styles.forgotPasswordText}>Mot de passe oublié ?</Text>
-              </TouchableOpacity>
+                <TextInput
+                  placeholder="Confirmer le mot de passe"
+                  placeholderTextColor="#888"
+                  secureTextEntry
+                  value={confirmPassword}
+                  onChangeText={setConfirmPassword}
+                  editable={!loading}
+                  style={styles.input}
+                />
+
+                <TouchableOpacity
+                  style={[styles.loginButton, loading && styles.loginButtonDisabled]}
+                  onPress={handleChangePassword}
+                  disabled={loading}
+                >
+                  {loading ? (
+                    <ActivityIndicator color="white" />
+                  ) : (
+                    <Text style={styles.loginButtonText}>Enregistrer</Text>
+                  )}
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  onPress={() => setStep("login")}
+                  disabled={loading}
+                  style={{ marginTop: 15, alignItems: "center" }}
+                >
+                  <Text style={{ color: "#fff", textDecorationLine: "underline" }}>Annuler</Text>
+                </TouchableOpacity>
+              </>
             )}
-
-            <View style={styles.switchAuthRow}>
-              <Text style={styles.switchAuthText}>
-                {isSignUpMode ? "Vous avez déjà un compte ?" : "Pas encore de compte ?"}
-              </Text>
-              <TouchableOpacity onPress={() => setIsSignUpMode((prev) => !prev)} disabled={loading}>
-                <Text style={styles.switchAuthLink}>
-                  {isSignUpMode ? "Se connecter" : "Créer un compte"}
-                </Text>
-              </TouchableOpacity>
-            </View>
           </View>
+
         </ScrollView>
       </KeyboardAvoidingView>
     </ImageBackground>
