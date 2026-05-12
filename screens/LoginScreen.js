@@ -44,7 +44,7 @@ export default function LoginScreen({ navigation }) {
 
       if (error) {
         let errorMessage = "Erreur de connexion";
-        
+
         if (error.message.includes("Invalid login credentials")) {
           errorMessage = "Email ou mot de passe incorrect";
         } else if (error.message.includes("Email not confirmed")) {
@@ -59,12 +59,17 @@ export default function LoginScreen({ navigation }) {
       }
 
       if (data?.user) {
-        Alert.alert("Succès", "Connexion réussie ! Bienvenue sur SpeedNation.", [
-          {
-            text: "C'est parti",
-            onPress: () => navigation.navigate("Tabs", { screen: "Home" }),
-          },
-        ]);
+        if (Platform.OS === "web") {
+          window.alert("Connexion réussie ! Bienvenue sur SpeedNation.");
+          navigation.navigate("Tabs", { screen: "Home" });
+        } else {
+          Alert.alert("Succès", "Connexion réussie ! Bienvenue sur SpeedNation.", [
+            {
+              text: "C'est parti",
+              onPress: () => navigation.navigate("Tabs", { screen: "Home" }),
+            },
+          ]);
+        }
       }
     } catch (error) {
       Alert.alert("Erreur", "Une erreur inattendue est survenue");
@@ -109,16 +114,21 @@ export default function LoginScreen({ navigation }) {
       }
 
       if (data?.user) {
-        Alert.alert(
-          "Bienvenue !",
-          "Ton compte a été créé et tu es maintenant connecté.",
-          [
-            {
-              text: "C'est parti",
-              onPress: () => navigation.navigate("Tabs", { screen: "Home" }),
-            },
-          ]
-        );
+        if (Platform.OS === "web") {
+          window.alert("Bienvenue ! Ton compte a été créé et tu es maintenant connecté.");
+          navigation.navigate("Tabs", { screen: "Home" });
+        } else {
+          Alert.alert(
+            "Bienvenue !",
+            "Ton compte a été créé et tu es maintenant connecté.",
+            [
+              {
+                text: "C'est parti",
+                onPress: () => navigation.navigate("Tabs", { screen: "Home" }),
+              },
+            ]
+          );
+        }
       }
     } catch (error) {
       Alert.alert("Erreur", "Une erreur inattendue est survenue");
@@ -219,7 +229,7 @@ export default function LoginScreen({ navigation }) {
               style={styles.input}
             />
 
-            <TouchableOpacity 
+            <TouchableOpacity
               style={[styles.loginButton, loading && styles.loginButtonDisabled]}
               onPress={isSignUpMode ? handleSignUp : handleLogin}
               disabled={loading}
