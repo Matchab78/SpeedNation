@@ -16,7 +16,10 @@ RUN npm run build
 # Copy PWA assets into dist so they are served correctly
 RUN mkdir -p /app/dist/assets && \
     cp /app/assets/logo.png /app/dist/assets/logo.png && \
-    cp /app/web/manifest.json /app/dist/manifest.json
+    cp /app/assets/logo.png /app/dist/favicon.ico && \
+    cp /app/manifest.json /app/dist/manifest.json && \
+    cp /app/manifest.json /app/dist/site.webmanifest
+
 
 # Production stage - serve static files with simple HTTP server
 FROM node:20-alpine
