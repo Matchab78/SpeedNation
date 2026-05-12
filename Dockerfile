@@ -15,10 +15,13 @@ RUN npm run build
 
 # Copy PWA assets into dist so they are served correctly
 RUN mkdir -p /app/dist/assets && \
+    cp /app/assets/favicon.ico /app/dist/favicon.ico && \
+    cp /app/assets/favicon-96x96.png /app/dist/favicon-96x96.png && \
+    cp /app/assets/favicon.svg /app/dist/favicon.svg && \
+    cp /app/assets/apple-touch-icon.png /app/dist/apple-touch-icon.png && \
+    cp /app/assets/site.webmanifest /app/dist/site.webmanifest && \
     cp /app/assets/logo.png /app/dist/assets/logo.png && \
-    cp /app/assets/logo.png /app/dist/favicon.ico && \
-    cp /app/manifest.json /app/dist/manifest.json && \
-    cp /app/manifest.json /app/dist/site.webmanifest
+    cp /app/manifest.json /app/dist/manifest.json
 
 
 # Production stage - serve static files with simple HTTP server
