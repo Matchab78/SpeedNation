@@ -199,6 +199,9 @@ export const profilesApi = {
 export const storageApi = {
   upload: async (fileUri, bucket) => {
     const formData = new FormData();
+    // Add bucket first so multer can access it in req.body
+    formData.append('bucket', bucket);
+
     const filename = fileUri.split('/').pop();
     const match = /\.(\w+)$/.exec(filename);
     const type = match ? `image/${match[1]}` : `image`;
@@ -223,8 +226,6 @@ export const storageApi = {
       });
     }
     
-    formData.append('bucket', bucket);
-
     return apiService.request('/storage/upload', {
       method: 'POST',
       body: formData,
