@@ -226,17 +226,38 @@ export default function ChatListScreen({ navigation }) {
     );
   }
 
+  const showSecurityInfo = () => {
+    Alert.alert(
+      "Sécurisation des données",
+      "Vos messages sont protégés. Les données transitent via un tunnel sécurisé (SSL/HTTPS) et sont stockées de manière isolée dans notre base de données sur le VPS. \n\nL'accès est restreint et nous travaillons sur le cryptage de bout en bout pour une confidentialité totale.",
+      [{ text: "Compris", style: "default" }]
+    );
+  };
+
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Messages</Text>
+
+      <View style={styles.headerRow}>
+        <Text style={styles.title}>Messages</Text>
+        <TouchableOpacity onPress={showSecurityInfo} style={styles.helpIcon}>
+          <Ionicons name="help-circle-outline" size={24} color="#8916CB" />
+        </TouchableOpacity>
+      </View>
+
       
       {conversations.length === 0 ? (
         <View style={styles.emptyContainer}>
-          <Ionicons name="chatbubbles-outline" size={60} color="#666" />
-          <Text style={styles.emptyText}>Aucun message</Text>
+          <Ionicons name="chatbubbles-outline" size={80} color="#1a1a1a" />
+          <Text style={styles.emptyText}>Commencez à discuter</Text>
           <Text style={styles.emptySubText}>
-            Commence une conversation avec un autre utilisateur
+            Recherchez un profil et envoyez un message pour débuter une conversation.
           </Text>
+          <TouchableOpacity 
+            style={styles.startBtn}
+            onPress={() => navigation.navigate('Search')}
+          >
+            <Text style={styles.startBtnText}>Rechercher un membre</Text>
+          </TouchableOpacity>
         </View>
       ) : (
         <FlatList
@@ -262,7 +283,27 @@ const styles = StyleSheet.create({
     fontSize: 28,
     fontWeight: "bold",
     color: "#fff",
+  },
+  headerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     marginBottom: 20,
+  },
+  helpIcon: {
+    padding: 5,
+  },
+  startBtn: {
+    backgroundColor: '#8916CB',
+    paddingVertical: 12,
+    paddingHorizontal: 25,
+    borderRadius: 25,
+    marginTop: 25,
+  },
+  startBtnText: {
+    color: '#fff',
+    fontWeight: '700',
+    fontSize: 15,
   },
   listContainer: {
     paddingBottom: 20,

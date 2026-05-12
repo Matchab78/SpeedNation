@@ -95,6 +95,30 @@ export default function AdminPanelScreen({ navigation }) {
     }
   };
 
+  const handleResetPassword = async (userItem) => {
+    const tempPass = window.prompt ? window.prompt(`Saisir un mot de passe temporaire pour ${userItem.email} :`, "Vitesse2024!") : null;
+    if (!tempPass || tempPass.length < 6) {
+      if (tempPass) Alert.alert("Erreur", "Le mot de passe doit faire au moins 6 caractères.");
+      return;
+    }
+
+    setActionLoading(true);
+    try {
+      const { authService } = require("../services/authService");
+      const { success, error } = await authService.adminResetPassword(userItem.id, tempPass);
+      if (success) {
+        Alert.alert("Succès", `Le mot de passe de ${userItem.full_name || userItem.email} a été réinitialisé.\n\nIl devra le changer à sa prochaine connexion.`);
+      } else {
+        Alert.alert("Erreur", error.message || "Échec de la réinitialisation");
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+
   const renderStats = () => (
     <ScrollView contentContainerStyle={styles.scrollContent}>
       <View style={styles.cardRow}>
@@ -139,6 +163,14 @@ export default function AdminPanelScreen({ navigation }) {
           
           <View style={styles.actionRow}>
             <TouchableOpacity 
+              style={styles.resetBtn}
+              onPress={() => handleResetPassword(item)}
+              disabled={actionLoading}
+            >
+              <Ionicons name="key-outline" size={18} color="#f59e0b" />
+            </TouchableOpacity>
+
+            <TouchableOpacity 
               style={[styles.actionBtn, item.role === 'admin' ? styles.demoteBtn : styles.promoteBtn]} 
               onPress={() => toggleAdminRole(item)}
               disabled={actionLoading}
@@ -158,6 +190,7 @@ export default function AdminPanelScreen({ navigation }) {
               </TouchableOpacity>
             )}
           </View>
+
         </View>
       )}
     />
@@ -240,6 +273,7 @@ const styles = StyleSheet.create({
   promoteBtn: { borderColor: '#8916CB', backgroundColor: 'rgba(137, 22, 203, 0.1)' },
   demoteBtn: { borderColor: '#444', backgroundColor: '#222' },
   actionBtnText: { color: '#fff', fontSize: 11, fontWeight: '600' },
+  resetBtn: { padding: 8, borderRadius: 8, backgroundColor: 'rgba(245, 158, 11, 0.1)' },
   deleteBtn: { padding: 8, borderRadius: 8, backgroundColor: 'rgba(239, 68, 68, 0.1)' },
   actionOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' },
 });
