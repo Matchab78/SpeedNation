@@ -235,9 +235,8 @@ export default function EventsScreen({ navigation }) {
     </View>
   );
 
-  return (
-    <View style={styles.container}>
-
+  const renderHeader = () => (
+    <>
       {/* HEADER */}
       <View style={styles.header}>
         <Text style={styles.title}>Événements</Text>
@@ -299,20 +298,22 @@ export default function EventsScreen({ navigation }) {
           </View>
         </View>
       )}
+    </>
+  );
 
-      {/* Création/édition déplacées vers un écran dédié */}
-
-      {/* LISTE */}
+  return (
+    <View style={styles.container}>
       {loading ? (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator color="#ffffff" />
+          <ActivityIndicator color="#ffffff" size="large" />
         </View>
       ) : (
         <FlatList
           data={otherEvents}
           keyExtractor={(item) => item.id}
           renderItem={renderEventCard}
-          contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 20 }}
+          ListHeaderComponent={renderHeader}
+          contentContainerStyle={{ paddingBottom: 40 }}
           ListEmptyComponent={
             <Text style={styles.emptyText}>
               Aucun événement pour le moment.
@@ -320,7 +321,6 @@ export default function EventsScreen({ navigation }) {
           }
         />
       )}
-
     </View>
   );
 }
@@ -340,7 +340,6 @@ const styles = StyleSheet.create({
   container: { 
     flex: 1,
     backgroundColor: COLORS.background,
-    paddingTop: 60,
   },
 
   header: {
@@ -348,6 +347,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     paddingHorizontal: 25,
+    marginTop: 60,
     marginBottom: 20,
   },
 
@@ -488,6 +488,7 @@ const styles = StyleSheet.create({
     marginBottom: 15,
     borderWidth: 1,
     borderColor: COLORS.border,
+    marginHorizontal: 20,
   },
   cardImage: {
     width: 75,
