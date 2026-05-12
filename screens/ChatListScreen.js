@@ -9,9 +9,19 @@ import {
   Image,
   Alert,
   Animated,
-  PanResponder
+  PanResponder,
+  Platform,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+
+const showAlert = (title, message) => {
+  if (Platform.OS === "web") {
+    window.alert(`${title}\n${message}`);
+  } else {
+    Alert.alert(title, message);
+  }
+};
+
 import { messagingService } from "../services/messagingService";
 import { useAuth } from "../utils/authContext";
 import { getImageUrl } from "../services/apiService";
@@ -227,10 +237,9 @@ export default function ChatListScreen({ navigation }) {
   }
 
   const showSecurityInfo = () => {
-    Alert.alert(
+    showAlert(
       "Sécurisation des données",
-      "Vos messages sont protégés. Les données transitent via un tunnel sécurisé (SSL/HTTPS) et sont stockées de manière isolée dans notre base de données sur le VPS. \n\nL'accès est restreint et nous travaillons sur le cryptage de bout en bout pour une confidentialité totale.",
-      [{ text: "Compris", style: "default" }]
+      "Vos messages sont protégés. Les données transitent via un tunnel sécurisé (SSL/HTTPS) et sont stockées de manière isolée dans notre base de données sur le VPS. \n\nL'accès est restreint et nous travaillons sur le cryptage de bout en bout pour une confidentialité totale."
     );
   };
 
