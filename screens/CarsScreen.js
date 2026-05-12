@@ -20,6 +20,7 @@ import { useAuth } from "../utils/authContext";
 import { carService } from "../services/carService";
 import { authService } from "../services/authService";
 import { storageService } from "../services/storageService";
+import { getImageUrl } from "../services/apiService";
 
 export default function CarsScreen({ navigation }) {
   const { user, profile, refreshUser, isAdmin } = useAuth();
@@ -148,7 +149,7 @@ export default function CarsScreen({ navigation }) {
 
   const renderCarCard = ({ item }) => (
     <View style={styles.carCard}>
-      <Image source={{ uri: item.image_url || 'https://via.placeholder.com/150' }} style={styles.carImage} />
+      <Image source={{ uri: getImageUrl(item.image_url) || 'https://via.placeholder.com/150' }} style={styles.carImage} />
       <View style={styles.carInfoContainer}>
         <Text style={styles.carTitle}>{item.name}</Text>
         <Text style={styles.carDetails}>{item.price_purchased}€ • {item.power_hp} Ch</Text>
@@ -187,7 +188,7 @@ export default function CarsScreen({ navigation }) {
         )}
 
         <TouchableOpacity onPress={() => setShowEditProfileModal(true)}>
-          <Image source={{ uri: profile?.avatar_url || 'https://via.placeholder.com/100' }} style={styles.avatar} />
+          <Image source={{ uri: getImageUrl(profile?.avatar_url) || 'https://via.placeholder.com/100' }} style={styles.avatar} />
         </TouchableOpacity>
 
         <Text style={styles.name}>{profile?.full_name || user?.email}</Text>
@@ -304,7 +305,7 @@ const styles = StyleSheet.create({
   carDetails: { color: "#666", fontSize: 13, marginTop: 4 },
   carCardMenuButton: { padding: 10 },
   carCardMenuText: { color: "#888", fontSize: 18 },
-  fab: { position: "absolute", bottom: 30, right: 30, width: 60, height: 60, borderRadius: 30, backgroundColor: "#8916CB", justifyContent: "center", alignItems: "center", elevation: 5 },
+  fab: { position: "absolute", bottom: 30, right: 30, width: 60, height: 60, borderRadius: 30, backgroundColor: "#8916CB", justifyContent: "center", alignItems: "center", elevation: 5, zIndex: 1000 },
   fabIcon: { color: "#fff", fontSize: 32, fontWeight: "300" },
   emptyText: { color: "#444", textAlign: "center", marginTop: 50 },
   modalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.85)", justifyContent: "center" },

@@ -22,6 +22,7 @@ CREATE TABLE IF NOT EXISTS profiles (
   age integer,
   avatar_url text,
   followers_count integer DEFAULT 0,
+  following_count integer DEFAULT 0,
   role text DEFAULT 'user' CHECK (role = ANY (ARRAY['user', 'admin'])),
   created_at timestamp with time zone DEFAULT now(),
   updated_at timestamp with time zone DEFAULT now(),

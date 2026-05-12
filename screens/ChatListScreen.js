@@ -14,6 +14,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { messagingService } from "../services/messagingService";
 import { useAuth } from "../utils/authContext";
+import { getImageUrl } from "../services/apiService";
 
 export default function ChatListScreen({ navigation }) {
   const { user } = useAuth();
@@ -153,7 +154,7 @@ export default function ChatListScreen({ navigation }) {
           >
             <View style={styles.chatHeader}>
               {item.otherUser?.avatar_url ? (
-                <Image source={{ uri: item.otherUser.avatar_url }} style={styles.avatar} />
+                <Image source={{ uri: getImageUrl(item.otherUser.avatar_url) }} style={styles.avatar} />
               ) : (
                 <View style={[styles.avatar, { backgroundColor: '#2a2a2a', justifyContent: 'center', alignItems: 'center' }]}>
                   <Ionicons name="person" size={24} color="#666" />

@@ -1,5 +1,13 @@
 // Service API pour communiquer avec le backend
 const API_BASE_URL = process.env.API_BASE_URL || `${window.location.origin}/api`;
+const SERVER_URL = API_BASE_URL.replace('/api', '');
+
+export const getImageUrl = (url) => {
+  if (!url) return null;
+  if (url.startsWith('http')) return url;
+  if (url.startsWith('/uploads')) return `${SERVER_URL}${url}`;
+  return url;
+};
 
 class ApiService {
   async request(endpoint, options = {}) {

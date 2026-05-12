@@ -14,6 +14,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { messagingService } from "../services/messagingService";
 import { useAuth } from "../utils/authContext";
+import { getImageUrl } from "../services/apiService";
 
 export default function ChatScreen({ route, navigation }) {
   const { user } = useAuth();
@@ -188,7 +189,7 @@ export default function ChatScreen({ route, navigation }) {
         {!isOwnMessage && (
           otherUser?.avatar_url ? (
             <Image
-              source={{ uri: otherUser.avatar_url }}
+              source={{ uri: getImageUrl(otherUser.avatar_url) }}
               style={styles.messageAvatar}
             />
           ) : (
@@ -223,7 +224,7 @@ export default function ChatScreen({ route, navigation }) {
         {isOwnMessage && (
           user.avatar_url ? (
             <Image
-              source={{ uri: user.avatar_url }}
+              source={{ uri: getImageUrl(user.avatar_url) }}
               style={styles.messageAvatar}
             />
           ) : (

@@ -13,6 +13,7 @@ import { Image } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { eventService } from "../services/eventService";
 import { useAuth } from "../utils/authContext";
+import { getImageUrl } from "../services/apiService";
 
 export default function EventsScreen({ navigation }) {
   const { user, isAdmin } = useAuth();
@@ -174,7 +175,7 @@ export default function EventsScreen({ navigation }) {
       <Image
         source={
           item.image_url
-            ? { uri: item.image_url.trim() }
+            ? { uri: getImageUrl(item.image_url.trim()) }
             : require("../assets/M3GreyList.jpg")
         }
         style={styles.cardImage}
@@ -257,7 +258,7 @@ export default function EventsScreen({ navigation }) {
           <Image
             source={
               featuredEvent.image_url
-                ? { uri: featuredEvent.image_url.trim() }
+                ? { uri: getImageUrl(featuredEvent.image_url.trim()) }
                 : require("../assets/eventscreen.jpeg")
             }
             style={styles.heroImage}

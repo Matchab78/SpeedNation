@@ -108,8 +108,11 @@ router.post('/:id/follow', async (req, res) => {
     
     await query('INSERT INTO follows (id, follower_id, following_id) VALUES ($1, $2, $3)', [uuidv4(), follower_id, id]);
 
-    // Update followers count
+    // Update followers count of the person being followed
     await query('UPDATE profiles SET followers_count = followers_count + 1 WHERE id = $1', [id]);
+    
+    // Update following count of the person who is following
+    await query('UPDATE profiles SET following_count = following_count + 1 WHERE id = $1', [follower_id]);
 
     res.json({ message: 'Followed successfully' });
   } catch (error) {
@@ -126,13 +129,48 @@ router.delete('/:id/follow', async (req, res) => {
     
     await query('DELETE FROM follows WHERE follower_id = $1 AND following_id = $2', [follower_id, id]);
 
-    // Update followers count
-    await query('UPDATE profiles SET followers_count = followers_count - 1 WHERE id = $1', [id]);
+    // Update followers count of the person being unfollowed
+    await query('UPDATE profiles SET followers_count = GREATEST(0, followers_count - 1) WHERE id = $1', [id]);
+    
+    // Update following count of the person who is unfollowing
+    await query('UPDATE profiles SET following_count = GREATEST(0, following_count - 1) WHERE id = $1', [follower_id]);
 
     res.json({ message: 'Unfollowed successfully' });
   } catch (error) {
     console.error('Unfollow error:', error);
     res.status(400).json({ error: error.message });
+  }
+});
+
+// Get followers list
+router.get('/:id/followers', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const result = await query(`
+      SELECT p.id, p.full_name, p.avatar_url, p.profession
+      FROM profiles p
+      JOIN follows f ON p.id = f.follower_id
+      WHERE f.following_id = $1
+    `, [id]);
+    res.json({ data: result.rows });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get following list
+router.get('/:id/following', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const result = await query(`
+      SELECT p.id, p.full_name, p.avatar_url, p.profession
+      FROM profiles p
+      JOIN follows f ON p.id = f.following_id
+      WHERE f.follower_id = $1
+    `, [id]);
+    res.json({ data: result.rows });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
   }
 });
 
