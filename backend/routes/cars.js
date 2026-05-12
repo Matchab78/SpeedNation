@@ -60,15 +60,24 @@ router.post('/', async (req, res) => {
   }
 });
 
-// Update car
+// Update car (supports partial updates via COALESCE)
 router.put('/:id', async (req, res) => {
   try {
     const { id } = req.params;
     const { name, brand, model, year, price_purchased, power_hp, image_url } = req.body;
     
     const result = await query(
-      'UPDATE cars SET name = $1, brand = $2, model = $3, year = $4, price_purchased = $5, power_hp = $6, image_url = $7, updated_at = NOW() WHERE id = $8 RETURNING *',
-      [name, brand, model, year, price_purchased, power_hp, image_url, id]
+      `UPDATE cars SET
+        name = COALESCE($1, name),
+        brand = COALESCE($2, brand),
+        model = COALESCE($3, model),
+        year = COALESCE($4, year),
+        price_purchased = COALESCE($5, price_purchased),
+        power_hp = COALESCE($6, power_hp),
+        image_url = COALESCE($7, image_url),
+        updated_at = NOW()
+      WHERE id = $8 RETURNING *`,
+      [name ?? null, brand ?? null, model ?? null, year ?? null, price_purchased ?? null, power_hp ?? null, image_url ?? null, id]
     );
 
     if (result.rows.length === 0) {

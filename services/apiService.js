@@ -1,9 +1,9 @@
 export const getImageUrl = (url) => {
   if (!url) return null;
   if (url.startsWith('http')) return url;
-  
-  const base = (typeof window !== 'undefined' && window.location?.origin) 
-    ? window.location.origin 
+
+  const base = (typeof window !== 'undefined' && window.location?.origin)
+    ? window.location.origin
     : '';
 
   // Si c'est déjà un chemin complet commençant par /uploads
@@ -33,9 +33,9 @@ class ApiService {
   async request(endpoint, options = {}) {
     const baseUrl = getApiBaseUrl();
     const url = `${baseUrl}${endpoint}`;
-    
+
     const isFormData = options.body instanceof FormData;
-    
+
     const fetchOptions = {
       ...options,
       headers: {
@@ -52,7 +52,7 @@ class ApiService {
     console.log(`[API] Fetching ${url}...`);
     const response = await fetch(url, fetchOptions);
     console.log(`[API] Response status: ${response.status}`);
-    
+
     if (!response.ok) {
       const errorText = await response.text();
       console.error(`[API] Error response:`, errorText);
@@ -119,48 +119,48 @@ export const authApi = {
 // Cars API
 export const carsApi = {
   getAll: () => apiService.get('/cars'),
-  
+
   getById: (id) => apiService.get(`/cars/${id}`),
-  
+
   create: (carData) => apiService.post('/cars', carData),
-  
+
   update: (id, carData) => apiService.put(`/cars/${id}`, carData),
-  
+
   getByUserId: (userId) => apiService.get(`/cars?user_id=${userId}`),
-  
+
   delete: (id) => apiService.delete(`/cars/${id}`),
-  
+
   toggleFavorite: (id, userId) => apiService.post(`/cars/${id}/favorite`, { user_id: userId }),
 };
 
 // Events API
 export const eventsApi = {
   getAll: () => apiService.get('/events'),
-  
+
   getById: (id) => apiService.get(`/events/${id}`),
-  
+
   create: (eventData) => apiService.post('/events', eventData),
-  
+
   update: (id, eventData) => apiService.put(`/events/${id}`, eventData),
-  
+
   delete: (id) => apiService.delete(`/events/${id}`),
-  
+
   join: (id, userId) => apiService.post(`/events/${id}/join`, { user_id: userId }),
-  
+
   leave: (id, userId) => apiService.post(`/events/${id}/leave`, { user_id: userId }),
 };
 
 // Messaging API
 export const messagingApi = {
   getConversations: (userId) => apiService.get(`/messaging/conversations?user_id=${userId}`),
-  
+
   getMessages: (conversationId) => apiService.get(`/messaging/conversations/${conversationId}/messages`),
-  
+
   createConversation: (participants) => apiService.post('/messaging/conversations', participants),
-  
+
   sendMessage: (messageData) => apiService.post('/messaging/messages', messageData),
-  
-  markAsRead: (conversationId, userId) => 
+
+  markAsRead: (conversationId, userId) =>
     apiService.post(`/messaging/conversations/${conversationId}/read`, { user_id: userId }),
 };
 
@@ -169,26 +169,26 @@ export const adminApi = {
   getStats: () => apiService.get('/admin/stats'),
   getUsers: () => apiService.get('/admin/users'),
   getEvents: () => apiService.get('/admin/events'),
-  toggleEventFeature: (id, isFeatured) => 
+  toggleEventFeature: (id, isFeatured) =>
     apiService.put(`/admin/events/${id}/feature`, { is_featured: isFeatured }),
   deleteUser: (id) => apiService.delete(`/admin/users/${id}`),
   updateUserRole: (id, role) => apiService.put(`/admin/users/${id}/role`, { role }),
-  resetUserPassword: (id, temporaryPassword) => 
+  resetUserPassword: (id, temporaryPassword) =>
     apiService.post(`/admin/users/${id}/reset-password`, { temporary_password: temporaryPassword }),
 };
 
 export const profilesApi = {
   search: (query) => apiService.get(`/profiles/search?q=${query}`),
-  
+
   getById: (id) => apiService.get(`/profiles/${id}`),
-  
-  getFollowStatus: (id, followerId) => 
+
+  getFollowStatus: (id, followerId) =>
     apiService.get(`/profiles/${id}/follow-status?follower_id=${followerId}`),
-  
+
   update: (id, profileData) => apiService.put(`/profiles/${id}`, profileData),
-  
+
   follow: (id, followerId) => apiService.post(`/profiles/${id}/follow`, { follower_id: followerId }),
-  
+
   unfollow: (id, followerId) => apiService.delete(`/profiles/${id}/follow?follower_id=${followerId}`),
 
   getRecent: () => apiService.get('/profiles/recent'),
@@ -202,9 +202,14 @@ export const storageApi = {
     // Add bucket first so multer can access it in req.body
     formData.append('bucket', bucket);
 
-    const filename = fileUri.split('/').pop();
+    let filename = fileUri.split('/').pop();
     const match = /\.(\w+)$/.exec(filename);
-    const type = match ? `image/${match[1]}` : `image`;
+
+    // Si pas d'extension, forcer .jpg par défaut (cas expo ImagePicker sur certains appareils)
+    if (!match) {
+      filename = `${filename}.jpg`;
+    }
+    const type = match ? `image/${match[1].toLowerCase()}` : 'image/jpeg';
 
     // Sur Web, il faut transformer l'URI en Blob pour que multer le reconnaisse
     if (typeof window !== 'undefined') {
@@ -225,7 +230,7 @@ export const storageApi = {
         type: type,
       });
     }
-    
+
     return apiService.request('/storage/upload', {
       method: 'POST',
       body: formData,

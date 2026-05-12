@@ -80,15 +80,25 @@ router.post('/', async (req, res) => {
   }
 });
 
-// Update event
+// Update event (supports partial updates via COALESCE)
 router.put('/:id', async (req, res) => {
   try {
     const { id } = req.params;
     const { title, description, event_date, event_time, location, image_url, visibility, max_participants } = req.body;
     
     const result = await query(
-      'UPDATE events SET title = $1, description = $2, event_date = $3, event_time = $4, location = $5, image_url = $6, visibility = $7, max_participants = $8, updated_at = NOW() WHERE id = $9 RETURNING *',
-      [title, description, event_date, event_time, location, image_url, visibility, max_participants, id]
+      `UPDATE events SET 
+        title = COALESCE($1, title),
+        description = COALESCE($2, description),
+        event_date = COALESCE($3, event_date),
+        event_time = COALESCE($4, event_time),
+        location = COALESCE($5, location),
+        image_url = COALESCE($6, image_url),
+        visibility = COALESCE($7, visibility),
+        max_participants = COALESCE($8, max_participants),
+        updated_at = NOW()
+      WHERE id = $9 RETURNING *`,
+      [title ?? null, description ?? null, event_date ?? null, event_time ?? null, location ?? null, image_url ?? null, visibility ?? null, max_participants ?? null, id]
     );
 
     if (result.rows.length === 0) {

@@ -51,10 +51,29 @@ export const eventService = {
 
   /**
    * Mettre à jour un événement
+   * On récupère d'abord l'event existant pour merger les champs
+   * afin d'éviter d'écraser les champs NOT NULL avec undefined.
    */
   async updateEvent(eventId, creatorId, updates) {
     try {
-      const { data } = await eventsApi.update(eventId, updates);
+      // Récupérer l'event existant
+      const { data: existing } = await eventsApi.getById(eventId);
+      if (!existing) throw new Error('Event not found');
+
+      // Merger les données existantes avec les mises à jour
+      const fullPayload = {
+        creator_id: existing.creator_id,
+        title: updates.title ?? existing.title,
+        description: updates.description ?? existing.description,
+        event_date: updates.event_date ?? existing.event_date,
+        event_time: updates.event_time ?? existing.event_time,
+        location: updates.location ?? existing.location,
+        image_url: updates.image_url ?? existing.image_url,
+        visibility: updates.visibility ?? existing.visibility,
+        max_participants: updates.max_participants ?? existing.max_participants,
+      };
+
+      const { data } = await eventsApi.update(eventId, fullPayload);
       return { data, error: null };
     } catch (error) {
       return { data: null, error };
