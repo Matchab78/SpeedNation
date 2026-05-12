@@ -1,5 +1,5 @@
 import React from "react";
-import { View } from "react-native";
+import { View, useWindowDimensions } from "react-native";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { Ionicons, FontAwesome5 } from "@expo/vector-icons";
 
@@ -9,10 +9,12 @@ import CarsScreen from "../screens/CarsScreen";
 import SearchScreen from "../screens/SearchScreen";
 import ChatListScreen from "../screens/ChatListScreen";
 import { useAuth } from "../utils/authContext";
+import DesktopLayout from "./DesktopLayout";
 
 const Tab = createBottomTabNavigator();
 
-export default function TabNavigator() {
+// ── MOBILE TAB NAVIGATOR (unchanged) ──────────────────────────────────────────
+function MobileTabNavigator({ navigation }) {
   const { unreadCount } = useAuth();
 
   return (
@@ -77,21 +79,32 @@ export default function TabNavigator() {
             </View>
           );
         },
-
       })}
     >
       <Tab.Screen name="Home" component={HomeScreen} />
       <Tab.Screen name="Search" component={SearchScreen} />
-      <Tab.Screen 
-        name="Messages" 
-        component={ChatListScreen} 
+      <Tab.Screen
+        name="Messages"
+        component={ChatListScreen}
         options={{
           tabBarBadge: unreadCount > 0 ? unreadCount : null,
-          tabBarBadgeStyle: { backgroundColor: '#8916CB', color: '#fff', fontSize: 10 }
+          tabBarBadgeStyle: { backgroundColor: "#8916CB", color: "#fff", fontSize: 10 },
         }}
       />
       <Tab.Screen name="Events" component={EventsScreen} />
       <Tab.Screen name="Cars" component={CarsScreen} />
     </Tab.Navigator>
   );
+}
+
+// ── RESPONSIVE ROUTER ─────────────────────────────────────────────────────────
+export default function TabNavigator({ navigation }) {
+  const { width } = useWindowDimensions();
+  const isDesktop = width >= 768;
+
+  if (isDesktop) {
+    return <DesktopLayout navigation={navigation} />;
+  }
+
+  return <MobileTabNavigator navigation={navigation} />;
 }
