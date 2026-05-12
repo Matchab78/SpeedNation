@@ -73,15 +73,22 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-// Update profile
+// Update profile (supports partial updates via COALESCE)
 router.put('/:id', async (req, res) => {
   try {
     const { id } = req.params;
     const { full_name, profession, location, age, avatar_url } = req.body;
     
     const result = await query(
-      'UPDATE profiles SET full_name = $1, profession = $2, location = $3, age = $4, avatar_url = $5, updated_at = NOW() WHERE id = $6 RETURNING *',
-      [full_name, profession, location, age, avatar_url, id]
+      `UPDATE profiles SET 
+        full_name = COALESCE($1, full_name), 
+        profession = COALESCE($2, profession), 
+        location = COALESCE($3, location), 
+        age = COALESCE($4, age), 
+        avatar_url = COALESCE($5, avatar_url), 
+        updated_at = NOW() 
+      WHERE id = $6 RETURNING *`,
+      [full_name ?? null, profession ?? null, location ?? null, age ?? null, avatar_url ?? null, id]
     );
 
     if (result.rows.length === 0) {

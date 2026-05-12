@@ -92,13 +92,42 @@ export const authService = {
 
   /**
    * Mettre à jour le profil utilisateur
+   * Récupère d'abord les données existantes pour merger
    */
   async updateProfile(userId, updates) {
     try {
       const { profilesApi } = require('./apiService');
-      const data = await profilesApi.update(userId, updates);
+      
+      // Récupérer le profil existant
+      const existingResponse = await profilesApi.getById(userId);
+      const existing = existingResponse?.data;
+      
+      if (!existing) throw new Error('Profile not found');
+
+      // Merger
+      const fullPayload = {
+        full_name: updates.full_name ?? existing.full_name,
+        profession: updates.profession ?? existing.profession,
+        location: updates.location ?? existing.location,
+        age: updates.age ?? existing.age,
+        avatar_url: updates.avatar_url ?? existing.avatar_url,
+      };
+
+      const data = await profilesApi.update(userId, fullPayload);
+      
+      // Mettre à jour le localStorage si c'est l'utilisateur actuel
+      const currentUser = JSON.parse(localStorage.getItem('user') || 'null');
+      if (currentUser && currentUser.id === userId) {
+        const updatedUser = { ...currentUser, ...fullPayload };
+        localStorage.setItem('user', JSON.stringify(updatedUser));
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new Event('auth-status-changed'));
+        }
+      }
+
       return { data, error: null };
     } catch (error) {
+      console.error('authService.updateProfile error:', error);
       return { data: null, error };
     }
   },

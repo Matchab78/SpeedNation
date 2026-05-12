@@ -64,10 +64,27 @@ export const carService = {
 
   /**
    * Mettre à jour une voiture
+   * Récupère d'abord les données existantes pour éviter d'écraser les champs NOT NULL
    */
   async updateCar(carId, userId, updates) {
     try {
-      const { data } = await carsApi.update(carId, updates);
+      // Récupérer la voiture existante
+      const { data: existing } = await carsApi.getById(carId);
+      if (!existing) throw new Error('Car not found');
+
+      // Merger les données existantes avec les mises à jour
+      const fullPayload = {
+        user_id: existing.user_id,
+        name: updates.name ?? existing.name,
+        brand: updates.brand ?? existing.brand,
+        model: updates.model ?? existing.model,
+        year: updates.year ?? existing.year,
+        price_purchased: updates.price_purchased ?? existing.price_purchased,
+        power_hp: updates.power_hp ?? existing.power_hp,
+        image_url: updates.image_url ?? existing.image_url,
+      };
+
+      const { data } = await carsApi.update(carId, fullPayload);
       return { data, error: null };
     } catch (error) {
       return { data: null, error };
