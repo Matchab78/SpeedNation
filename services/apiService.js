@@ -145,6 +145,9 @@ export const messagingApi = {
   createConversation: (participants) => apiService.post('/messaging/conversations', participants),
   
   sendMessage: (messageData) => apiService.post('/messaging/messages', messageData),
+  
+  markAsRead: (conversationId, userId) => 
+    apiService.post(`/messaging/conversations/${conversationId}/read`, { user_id: userId }),
 };
 
 // Admin API

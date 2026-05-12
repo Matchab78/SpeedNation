@@ -21,7 +21,16 @@ router.get('/conversations', async (req, res) => {
           WHERE m.conversation_id = c.id
           ORDER BY m.created_at DESC
           LIMIT 1
-        ) as last_message
+        ) as last_message,
+        (
+          SELECT COUNT(*)::int
+          FROM messages m
+          JOIN conversation_participants cp ON cp.conversation_id = c.id
+          WHERE m.conversation_id = c.id 
+          AND cp.user_id = $1
+          AND m.sender_id != $1
+          AND m.created_at > cp.last_read_at
+        ) as unread_count
       FROM conversations c
       LEFT JOIN profiles p1 ON c.participant1_id = p1.id
       LEFT JOIN profiles p2 ON c.participant2_id = p2.id
@@ -35,6 +44,26 @@ router.get('/conversations', async (req, res) => {
     res.status(400).json({ error: error.message });
   }
 });
+
+// Mark conversation as read
+router.post('/conversations/:id/read', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { user_id } = req.body;
+    
+    await query(`
+      UPDATE conversation_participants 
+      SET last_read_at = NOW() 
+      WHERE conversation_id = $1 AND user_id = $2
+    `, [id, user_id]);
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Mark as read error:', error);
+    res.status(400).json({ error: error.message });
+  }
+});
+
 
 // Get messages for conversation
 router.get('/conversations/:id/messages', async (req, res) => {

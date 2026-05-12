@@ -74,8 +74,13 @@ export const messagingService = {
 
   // Marquer les messages comme lus
   async markMessagesAsRead(conversationId, userId) {
-    // Non implémenté pour l'instant
-    return { success: false };
+    try {
+      await messagingApi.markAsRead(conversationId, userId);
+      return { success: true };
+    } catch (error) {
+      console.error('Erreur markMessagesAsRead:', error);
+      return { success: false, error };
+    }
   },
 
   // Obtenir le nombre de messages non lus

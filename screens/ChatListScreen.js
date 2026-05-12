@@ -164,15 +164,22 @@ export default function ChatListScreen({ navigation }) {
                 <Text style={styles.chatName}>
                   {item.is_group ? item.group_name : item.otherUser?.full_name || 'Utilisateur inconnu'}
                 </Text>
-                <Text style={styles.chatLastMsg}>
+                <Text style={[styles.chatLastMsg, item.unread_count > 0 && styles.unreadText]}>
                   {formatLastMessage(item.lastMessage)}
                 </Text>
               </View>
-              {item.lastMessage && (
-                <Text style={styles.chatTime}>
-                  {formatTime(item.lastMessage.created_at)}
-                </Text>
-              )}
+              <View style={styles.chatMeta}>
+                {item.lastMessage && (
+                  <Text style={styles.chatTime}>
+                    {formatTime(item.lastMessage.created_at)}
+                  </Text>
+                )}
+                {item.unread_count > 0 && (
+                  <View style={styles.unreadBadge}>
+                    <Text style={styles.unreadCountText}>{item.unread_count}</Text>
+                  </View>
+                )}
+              </View>
             </View>
           </TouchableOpacity>
         </Animated.View>
@@ -313,16 +320,12 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     color: "#fff",
   },
-  chatLastMsg: {
-    fontSize: 14,
-    color: "#888",
-    marginTop: 4,
-  },
-  chatTime: {
-    fontSize: 12,
-    color: "#666",
-    marginLeft: 8,
-  },
+  chatLastMsg: { color: "#888", fontSize: 13, marginTop: 4 },
+  unreadText: { color: "#fff", fontWeight: "600" },
+  chatMeta: { alignItems: "flex-end", justifyContent: "space-between", height: 40 },
+  chatTime: { color: "#555", fontSize: 11 },
+  unreadBadge: { backgroundColor: "#8916CB", minWidth: 18, height: 18, borderRadius: 9, justifyContent: "center", alignItems: "center", paddingHorizontal: 5, marginTop: 5 },
+  unreadCountText: { color: "#fff", fontSize: 10, fontWeight: "800" },
   loadingContainer: {
     flex: 1,
     justifyContent: "center",

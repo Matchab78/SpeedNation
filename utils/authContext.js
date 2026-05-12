@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { authService } from '../services/authService';
+import { messagingService } from '../services/messagingService';
 
 const AuthContext = createContext({});
 
@@ -16,6 +17,7 @@ export const AuthProvider = ({ children }) => {
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
     // Vérifier l'état de connexion au démarrage
@@ -97,11 +99,36 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  useEffect(() => {
+    if (!user) {
+      setUnreadCount(0);
+      return;
+    }
+
+    const fetchUnread = async () => {
+      try {
+        const { data } = await messagingService.getUserConversations(user.id);
+        if (data) {
+          const total = data.reduce((sum, conv) => sum + (conv.unread_count || 0), 0);
+          setUnreadCount(total);
+        }
+      } catch (e) {
+        console.warn('AuthContext unread fetch error:', e);
+      }
+    };
+
+    fetchUnread();
+    const interval = setInterval(fetchUnread, 10000); // Toutes les 10 secondes
+    return () => clearInterval(interval);
+  }, [user]);
+
   const value = {
     user,
     profile,
     loading,
     isAdmin,
+    unreadCount,
+    setUnreadCount,
     signOut,
     refreshUser: () => user && loadUserData(user.id),
   };

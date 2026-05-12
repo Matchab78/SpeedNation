@@ -8,10 +8,13 @@ import EventsScreen from "../screens/EventsScreen";
 import CarsScreen from "../screens/CarsScreen";
 import SearchScreen from "../screens/SearchScreen";
 import ChatListScreen from "../screens/ChatListScreen";
+import { useAuth } from "../utils/authContext";
 
 const Tab = createBottomTabNavigator();
 
 export default function TabNavigator() {
+  const { unreadCount } = useAuth();
+
   return (
     <Tab.Navigator
       initialRouteName="Home"
@@ -76,7 +79,14 @@ export default function TabNavigator() {
     >
       <Tab.Screen name="Home" component={HomeScreen} />
       <Tab.Screen name="Search" component={SearchScreen} />
-      <Tab.Screen name="Messages" component={ChatListScreen} />
+      <Tab.Screen 
+        name="Messages" 
+        component={ChatListScreen} 
+        options={{
+          tabBarBadge: unreadCount > 0 ? unreadCount : null,
+          tabBarBadgeStyle: { backgroundColor: '#8916CB', color: '#fff', fontSize: 10 }
+        }}
+      />
       <Tab.Screen name="Events" component={EventsScreen} />
       <Tab.Screen name="Cars" component={CarsScreen} />
     </Tab.Navigator>

@@ -70,6 +70,9 @@ export default function ChatScreen({ route, navigation }) {
           
           // Comparaison plus robuste pour éviter les re-renders inutiles
           if (prevLast?.id === incomingLast.id && prev.length === incoming.length) return prev;
+          
+          // Nouveaux messages reçus, on marque comme lu
+          messagingService.markMessagesAsRead(conversationId, userId);
           return incoming;
         });
       } catch (err) {
