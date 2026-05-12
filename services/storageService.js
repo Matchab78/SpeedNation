@@ -113,12 +113,11 @@ export const storageService = {
       
       if (response && response.data && response.data.url) {
         // L'URL retournée est relative (ex: /uploads/avatars/xxx.jpg)
-        // On la transforme en URL absolue pour que l'app puisse l'afficher
-        // On récupère la base de l'API (ex: http://51.12.53.100/api)
-        // Et on enlève le /api pour avoir la racine du serveur
-        const baseUrl = window.location.origin; 
+        // On construit l'URL absolue en utilisant l'origine actuelle
+        const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
         const fullUrl = `${baseUrl}${response.data.url}`;
         
+        console.log('[Storage] Full image URL:', fullUrl);
         return { url: fullUrl, error: null };
       }
       
