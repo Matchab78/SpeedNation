@@ -21,7 +21,6 @@ export default function LoginScreen({ navigation }) {
   const [isSignUpMode, setIsSignUpMode] = useState(false);
 
   const handleLogin = async () => {
-    // Validation
     if (!email.trim()) {
       Alert.alert("Erreur", "Veuillez entrer votre email");
       return;
@@ -32,7 +31,6 @@ export default function LoginScreen({ navigation }) {
       return;
     }
 
-    // Validation email basique
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
       Alert.alert("Erreur", "Veuillez entrer un email valide");
@@ -45,7 +43,6 @@ export default function LoginScreen({ navigation }) {
       const { data, error } = await authService.signIn(email.trim(), password);
 
       if (error) {
-        // Gérer les erreurs spécifiques
         let errorMessage = "Erreur de connexion";
         
         if (error.message.includes("Invalid login credentials")) {
@@ -62,12 +59,11 @@ export default function LoginScreen({ navigation }) {
       }
 
       if (data?.user) {
-        // Connexion réussie
         Alert.alert("Succès", "Connexion réussie ! Bienvenue sur SpeedNation.", [
           {
             text: "C'est parti",
             onPress: () => {
-              navigation.goBack();
+              navigation.navigate("Home");
             },
           },
         ]);
@@ -81,7 +77,6 @@ export default function LoginScreen({ navigation }) {
   };
 
   const handleSignUp = async () => {
-    // Validation
     if (!email.trim()) {
       Alert.alert("Erreur", "Veuillez entrer votre email");
       return;
@@ -123,7 +118,7 @@ export default function LoginScreen({ navigation }) {
             {
               text: "C'est parti",
               onPress: () => {
-                navigation.goBack();
+                navigation.navigate("Home");
               },
             },
           ]
