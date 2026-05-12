@@ -11,6 +11,7 @@ import {
   Animated,
   PanResponder,
   Platform,
+  Modal,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 
@@ -32,6 +33,8 @@ export default function ChatListScreen({ navigation }) {
   const [conversations, setConversations] = useState([]);
   const [loading, setLoading] = useState(true);
   const openRowRef = useRef(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [convToDelete, setConvToDelete] = useState(null);
 
   useEffect(() => {
     if (!user) return;
@@ -86,25 +89,20 @@ export default function ChatListScreen({ navigation }) {
   };
 
   const confirmHideConversation = (conversationId) => {
-    Alert.alert(
-      "Supprimer la conversation",
-      "Supprimer cette conversation uniquement pour toi ?",
-      [
-        { text: "Annuler", style: "cancel" },
-        {
-          text: "Supprimer",
-          style: "destructive",
-          onPress: async () => {
-            const res = await messagingService.hideConversation(conversationId, userId);
-            if (res?.error) {
-              console.error('Erreur hideConversation:', res.error);
-              return;
-            }
-            setConversations((prev) => (prev || []).filter((c) => c.id !== conversationId));
-          },
-        },
-      ]
-    );
+    setConvToDelete(conversationId);
+    setShowDeleteModal(true);
+  };
+
+  const doHideConversation = async () => {
+    if (!convToDelete) return;
+    setShowDeleteModal(false);
+    const res = await messagingService.hideConversation(convToDelete, userId);
+    if (res?.error) {
+      console.error('Erreur hideConversation:', res.error);
+      return;
+    }
+    setConversations((prev) => (prev || []).filter((c) => c.id !== convToDelete));
+    setConvToDelete(null);
   };
 
   const SwipeRow = ({ item }) => {
@@ -245,6 +243,26 @@ export default function ChatListScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
+
+      {/* --- MODAL SUPPRESSION CONVERSATION --- */}
+      <Modal visible={showDeleteModal} transparent animationType="fade" onRequestClose={() => setShowDeleteModal(false)}>
+        <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setShowDeleteModal(false)}>
+          <View style={styles.deleteModalBox}>
+            <Text style={styles.deleteModalTitle}>Supprimer la conversation</Text>
+            <Text style={styles.deleteModalText}>
+              Supprimer cette conversation pour toi uniquement ?{"\n"}Ton interlocuteur pourra toujours la voir.
+            </Text>
+            <View style={styles.deleteModalActions}>
+              <TouchableOpacity style={styles.deleteModalCancel} onPress={() => setShowDeleteModal(false)}>
+                <Text style={styles.deleteModalCancelText}>Annuler</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.deleteModalConfirm} onPress={doHideConversation}>
+                <Text style={styles.deleteModalConfirmText}>Supprimer</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </TouchableOpacity>
+      </Modal>
 
       <View style={styles.headerRow}>
         <Text style={styles.title}>Messages</Text>
@@ -449,5 +467,65 @@ const styles = StyleSheet.create({
     textAlign: "center",
     marginTop: 8,
     lineHeight: 20,
+  },
+
+  /* --- MODAL SUPPRESSION --- */
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.8)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  deleteModalBox: {
+    backgroundColor: COLORS.surface,
+    borderRadius: 24,
+    padding: 28,
+    width: "90%",
+    maxWidth: 400,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  deleteModalTitle: {
+    color: COLORS.foreground,
+    fontSize: 20,
+    fontWeight: "700",
+    marginBottom: 12,
+    textAlign: "center",
+  },
+  deleteModalText: {
+    color: COLORS.mutedForeground,
+    fontSize: 14,
+    textAlign: "center",
+    lineHeight: 21,
+    marginBottom: 24,
+  },
+  deleteModalActions: {
+    flexDirection: "row",
+    gap: 12,
+  },
+  deleteModalCancel: {
+    flex: 1,
+    paddingVertical: 13,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    alignItems: "center",
+  },
+  deleteModalCancelText: {
+    color: COLORS.mutedForeground,
+    fontWeight: "700",
+    fontSize: 14,
+  },
+  deleteModalConfirm: {
+    flex: 1,
+    paddingVertical: 13,
+    borderRadius: 999,
+    backgroundColor: "#991b1b",
+    alignItems: "center",
+  },
+  deleteModalConfirmText: {
+    color: "#fecaca",
+    fontWeight: "700",
+    fontSize: 14,
   },
 });
