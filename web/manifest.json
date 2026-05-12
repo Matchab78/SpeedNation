@@ -1,0 +1,24 @@
+{
+  "name": "SpeedNation",
+  "short_name": "SpeedNation",
+  "description": "La communauté des passionnés d'automobile",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#000000",
+  "theme_color": "#8916CB",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/assets/logo.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/assets/logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

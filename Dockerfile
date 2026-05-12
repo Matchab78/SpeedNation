@@ -11,9 +11,12 @@ RUN npm install --ignore-scripts --no-audit
 COPY . .
 
 # Run the build (npx expo export)
-# We don't ignore scripts here if any build script is needed, 
-# but we've cleaned up package.json
 RUN npm run build
+
+# Copy PWA assets into dist so they are served correctly
+RUN mkdir -p /app/dist/assets && \
+    cp /app/assets/logo.png /app/dist/assets/logo.png && \
+    cp /app/web/manifest.json /app/dist/manifest.json
 
 # Production stage - serve static files with simple HTTP server
 FROM node:20-alpine
@@ -28,4 +31,5 @@ RUN npm install -g http-server
 
 EXPOSE 80
 
-CMD ["http-server", "dist", "-p", "80", "-a", "0.0.0.0"]
+CMD ["http-server", "dist", "-p", "80", "-a", "0.0.0.0", "--cors"]
+

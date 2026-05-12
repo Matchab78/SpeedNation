@@ -2,12 +2,28 @@
   "expo": {
     "name": "SpeedNation",
     "slug": "SpeedNation-sdk54",
+    "version": "1.0.0",
     "entryPoint": "./index.js",
     "sdkVersion": "54.0.0",
+    "icon": "./assets/logo.png",
+    "splash": {
+      "image": "./assets/logo.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#000000"
+    },
     "platforms": [
       "ios",
       "android",
       "web"
-    ]
+    ],
+    "web": {
+      "favicon": "./assets/logo.png",
+      "name": "SpeedNation",
+      "shortName": "SpeedNation",
+      "description": "La communauté des passionnés d'automobile",
+      "themeColor": "#8916CB",
+      "backgroundColor": "#000000",
+      "bundler": "metro"
+    }
   }
-}
+}
