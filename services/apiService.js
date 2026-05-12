@@ -1,13 +1,23 @@
-// Service API pour communiquer avec le backend
-const API_BASE_URL = process.env.API_BASE_URL || `${window.location.origin}/api`;
-const SERVER_URL = API_BASE_URL.replace('/api', '');
-
 export const getImageUrl = (url) => {
   if (!url) return null;
   if (url.startsWith('http')) return url;
-  if (url.startsWith('/uploads')) return `${SERVER_URL}${url}`;
+  if (url.startsWith('/uploads')) {
+    const base = (typeof window !== 'undefined' && window.location?.origin) 
+      ? window.location.origin 
+      : '';
+    return `${base}${url}`;
+  }
   return url;
 };
+
+// Service API pour communiquer avec le backend
+const getApiBaseUrl = () => {
+  if (typeof window !== 'undefined' && window.location?.origin) {
+    return `${window.location.origin}/api`;
+  }
+  return 'http://localhost:3000/api';
+};
+const API_BASE_URL = getApiBaseUrl();
 
 class ApiService {
   async request(endpoint, options = {}) {

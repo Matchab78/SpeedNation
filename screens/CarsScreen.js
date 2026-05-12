@@ -208,46 +208,88 @@ export default function CarsScreen({ navigation }) {
         </TouchableOpacity>
       </View>
 
-      {/* --- LISTE --- */}
-      <FlatList
-        data={cars}
-        keyExtractor={(item) => item.id}
-        renderItem={renderCarCard}
-        contentContainerStyle={styles.carsListContent}
-        ListEmptyComponent={<Text style={styles.emptyText}>Aucune voiture ajoutée</Text>}
-      />
+      {/* --- LISTE + FAB dans un wrapper flex:1 --- */}
+      <View style={{ flex: 1 }}>
+        <FlatList
+          data={cars}
+          keyExtractor={(item) => item.id}
+          renderItem={renderCarCard}
+          contentContainerStyle={[styles.carsListContent, { paddingBottom: 100 }]}
+          ListEmptyComponent={<Text style={styles.emptyText}>Aucune voiture ajoutée</Text>}
+        />
 
-      <TouchableOpacity style={styles.fab} onPress={() => setShowAddModal(true)}>
-        <Text style={styles.fabIcon}>+</Text>
-      </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.fab}
+          onPress={() => {
+            setNewCar({ name: "", brand: "", model: "", year: "", price_purchased: "", power_hp: "", image_url: "", imageUri: null });
+            setShowAddModal(true);
+          }}
+          activeOpacity={0.85}
+        >
+          <Text style={styles.fabIcon}>+</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* --- MODAL AJOUTER VOITURE --- */}
+      <Modal visible={showAddModal} animationType="slide" transparent={true} onRequestClose={() => setShowAddModal(false)}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <ScrollView keyboardShouldPersistTaps="handled">
+              <Text style={styles.modalTitle}>Ajouter une voiture</Text>
+              <TextInput style={styles.modalInput} placeholder="Nom de la voiture *" placeholderTextColor="#666" value={newCar.name} onChangeText={t => setNewCar({...newCar, name: t})} />
+              <TextInput style={styles.modalInput} placeholder="Marque" placeholderTextColor="#666" value={newCar.brand} onChangeText={t => setNewCar({...newCar, brand: t})} />
+              <TextInput style={styles.modalInput} placeholder="Modèle" placeholderTextColor="#666" value={newCar.model} onChangeText={t => setNewCar({...newCar, model: t})} />
+              <TextInput style={styles.modalInput} placeholder="Année" keyboardType="numeric" placeholderTextColor="#666" value={newCar.year} onChangeText={t => setNewCar({...newCar, year: t})} />
+              <TextInput style={styles.modalInput} placeholder="Prix d'achat (€)" keyboardType="numeric" placeholderTextColor="#666" value={newCar.price_purchased} onChangeText={t => setNewCar({...newCar, price_purchased: t})} />
+              <TextInput style={styles.modalInput} placeholder="Puissance (ch)" keyboardType="numeric" placeholderTextColor="#666" value={newCar.power_hp} onChangeText={t => setNewCar({...newCar, power_hp: t})} />
+              <View style={styles.imageSelectorRow}>
+                <TouchableOpacity style={styles.imageBtnLarge} onPress={() => pickImage('gallery', 'newCar')}>
+                  <Ionicons name="images" size={24} color="#fff" />
+                  <Text style={{color:'#fff'}}>Galerie</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.imageBtnLarge} onPress={() => pickImage('camera', 'newCar')}>
+                  <Ionicons name="camera" size={24} color="#fff" />
+                  <Text style={{color:'#fff'}}>Photo</Text>
+                </TouchableOpacity>
+              </View>
+              {newCar.imageUri && <Image source={{uri: newCar.imageUri}} style={{width:'100%', height:150, borderRadius:12, marginBottom:10}} />}
+              <View style={styles.modalButtons}>
+                <TouchableOpacity style={styles.cancelButton} onPress={() => setShowAddModal(false)}>
+                  <Text style={styles.cancelText}>Annuler</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.addButtonModal} onPress={handleAddCar} disabled={uploadingImage}>
+                  {uploadingImage ? <ActivityIndicator color="#fff" /> : <Text style={styles.addText}>Ajouter</Text>}
+                </TouchableOpacity>
+              </View>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
 
       {/* --- MODAL EDIT PROFIL --- */}
-      <Modal visible={showEditProfileModal} animationType="slide" transparent={true}>
+      <Modal visible={showEditProfileModal} animationType="slide" transparent={true} onRequestClose={() => setShowEditProfileModal(false)}>
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <ScrollView keyboardShouldPersistTaps="handled">
               <Text style={styles.modalTitle}>Modifier mon profil</Text>
-              
               <View style={styles.imageSelectorRow}>
-                  <TouchableOpacity style={styles.avatarPicker} onPress={() => pickImage('gallery', 'editProfile')}>
-                    <Image source={{ uri: editProfile.avatarUri || profile?.avatar_url || 'https://via.placeholder.com/100' }} style={styles.avatarPreview} />
-                    <View style={styles.avatarOverlay}><Ionicons name="camera" size={20} color="#fff" /></View>
+                <TouchableOpacity style={styles.avatarPicker} onPress={() => pickImage('gallery', 'editProfile')}>
+                  <Image source={{ uri: editProfile.avatarUri || getImageUrl(profile?.avatar_url) || 'https://via.placeholder.com/100' }} style={styles.avatarPreview} />
+                  <View style={styles.avatarOverlay}><Ionicons name="camera" size={20} color="#fff" /></View>
+                </TouchableOpacity>
+                <View style={{flex: 1, gap: 10}}>
+                  <TouchableOpacity style={styles.smallImageBtn} onPress={() => pickImage('gallery', 'editProfile')}>
+                    <Text style={styles.smallImageBtnText}>Galerie</Text>
                   </TouchableOpacity>
-                  <View style={{flex: 1, gap: 10}}>
-                      <TouchableOpacity style={styles.smallImageBtn} onPress={() => pickImage('gallery', 'editProfile')}>
-                        <Text style={styles.smallImageBtnText}>Galerie</Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity style={styles.smallImageBtn} onPress={() => pickImage('camera', 'editProfile')}>
-                        <Text style={styles.smallImageBtnText}>Appareil Photo</Text>
-                      </TouchableOpacity>
-                  </View>
+                  <TouchableOpacity style={styles.smallImageBtn} onPress={() => pickImage('camera', 'editProfile')}>
+                    <Text style={styles.smallImageBtnText}>Appareil Photo</Text>
+                  </TouchableOpacity>
+                </View>
               </View>
-
               <TextInput style={styles.modalInput} placeholder="Nom Complet" placeholderTextColor="#666" value={editProfile.full_name} onChangeText={t => setEditProfile({...editProfile, full_name: t})} />
               <TextInput style={styles.modalInput} placeholder="Profession" placeholderTextColor="#666" value={editProfile.profession} onChangeText={t => setEditProfile({...editProfile, profession: t})} />
               <TextInput style={styles.modalInput} placeholder="Localisation" placeholderTextColor="#666" value={editProfile.location} onChangeText={t => setEditProfile({...editProfile, location: t})} />
               <TextInput style={styles.modalInput} placeholder="Âge" keyboardType="numeric" placeholderTextColor="#666" value={editProfile.age} onChangeText={t => setEditProfile({...editProfile, age: t})} />
-              
               <View style={styles.modalButtons}>
                 <TouchableOpacity style={styles.cancelButton} onPress={() => setShowEditProfileModal(false)}><Text style={styles.cancelText}>Annuler</Text></TouchableOpacity>
                 <TouchableOpacity style={styles.addButtonModal} onPress={handleUpdateProfile} disabled={uploadingImage}>
@@ -257,24 +299,6 @@ export default function CarsScreen({ navigation }) {
             </ScrollView>
           </View>
         </View>
-      </Modal>
-
-      {/* --- AUTRES MODALS (Add/Edit Car) --- */}
-      {/* ... similaires avec le système de sélection d'image direct ... */}
-      <Modal visible={showAddModal} animationType="slide" transparent={true}>
-          <View style={styles.modalOverlay}><View style={styles.modalContent}><ScrollView>
-            <Text style={styles.modalTitle}>Ajouter une voiture</Text>
-            <TextInput style={styles.modalInput} placeholder="Nom de la voiture" placeholderTextColor="#666" onChangeText={t => setNewCar({...newCar, name: t})} />
-            <View style={styles.imageSelectorRow}>
-                <TouchableOpacity style={styles.imageBtnLarge} onPress={() => pickImage('gallery')}><Ionicons name="images" size={24} color="#fff" /><Text style={{color:'#fff'}}>Galerie</Text></TouchableOpacity>
-                <TouchableOpacity style={styles.imageBtnLarge} onPress={() => pickImage('camera')}><Ionicons name="camera" size={24} color="#fff" /><Text style={{color:'#fff'}}>Photo</Text></TouchableOpacity>
-            </View>
-            {newCar.imageUri && <Image source={{uri: newCar.imageUri}} style={{width:'100%', height:150, borderRadius:12, marginBottom:10}} />}
-            <View style={styles.modalButtons}>
-                <TouchableOpacity style={styles.cancelButton} onPress={() => setShowAddModal(false)}><Text style={styles.cancelText}>Annuler</Text></TouchableOpacity>
-                <TouchableOpacity style={styles.addButtonModal} onPress={handleAddCar}><Text style={styles.addText}>Ajouter</Text></TouchableOpacity>
-            </View>
-          </ScrollView></View></View>
       </Modal>
     </View>
   );
