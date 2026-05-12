@@ -27,6 +27,12 @@ app.use((req, res, next) => {
 
 const path = require('path');
 
+// DEBUG: Log all requests to /uploads to see what's happening
+app.use('/uploads', (req, res, next) => {
+  console.log(`[DEBUG] ${new Date().toISOString()} - GET Upload: ${req.url}`);
+  next();
+});
+
 // Serve static files from the uploads directory using absolute path for Docker
 app.use('/uploads', express.static('/app/uploads'));
 
