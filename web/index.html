@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
-    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no, viewport-fit=cover" />
 
     <title>SpeedNation</title>
     <meta name="description" content="SpeedNation - La communauté des passionnés d'automobile" />
@@ -15,7 +15,7 @@
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
     <link rel="manifest" href="/site.webmanifest" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="black" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="SpeedNation" />
     <meta name="theme-color" content="#0B0813" />
 
@@ -27,14 +27,19 @@
         margin: 0;
         padding: 0;
         background-color: #0B0813;
+        /* Extend background into safe areas (notch, home bar) */
+        padding-top: env(safe-area-inset-top);
+        padding-top: constant(safe-area-inset-top);
       }
       body {
         overflow: hidden;
+        background-color: #0B0813;
       }
       #root {
         display: flex;
         height: 100%;
         flex: 1;
+        background-color: #0B0813;
       }
     </style>
   </head>
