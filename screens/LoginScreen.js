@@ -14,24 +14,40 @@ import {
 } from "react-native";
 import { authService } from "../services/authService";
 
+// Alerte compatible web et mobile
+const showAlert = (title, message) => {
+  if (Platform.OS === "web") {
+    window.alert(`${title}\n${message}`);
+  } else {
+    Alert.alert(title, message);
+  }
+};
+
 export default function LoginScreen({ navigation }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [isSignUpMode, setIsSignUpMode] = useState(false);
 
+  const goHome = () => {
+    navigation.reset({
+      index: 0,
+      routes: [{ name: "Tabs", params: { screen: "Home" } }],
+    });
+  };
+
   const handleLogin = async () => {
     if (!email.trim()) {
-      Alert.alert("Erreur", "Veuillez entrer votre email");
+      showAlert("Erreur", "Veuillez entrer votre email");
       return;
     }
     if (!password.trim()) {
-      Alert.alert("Erreur", "Veuillez entrer votre mot de passe");
+      showAlert("Erreur", "Veuillez entrer votre mot de passe");
       return;
     }
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
-      Alert.alert("Erreur", "Veuillez entrer un email valide");
+      showAlert("Erreur", "Veuillez entrer un email valide");
       return;
     }
 
@@ -48,14 +64,14 @@ export default function LoginScreen({ navigation }) {
         } else {
           errorMessage = error.message || "Une erreur est survenue";
         }
-        Alert.alert("Erreur", errorMessage);
+        showAlert("Erreur", errorMessage);
         return;
       }
 
-      navigation.navigate("Tabs", { screen: "Home" });
+      goHome();
 
     } catch (e) {
-      Alert.alert("Erreur", "Une erreur inattendue est survenue");
+      showAlert("Erreur", "Une erreur inattendue est survenue");
       console.error("Erreur de connexion:", e);
     } finally {
       setLoading(false);
@@ -64,20 +80,20 @@ export default function LoginScreen({ navigation }) {
 
   const handleSignUp = async () => {
     if (!email.trim()) {
-      Alert.alert("Erreur", "Veuillez entrer votre email");
+      showAlert("Erreur", "Veuillez entrer votre email");
       return;
     }
     if (!password.trim()) {
-      Alert.alert("Erreur", "Veuillez entrer un mot de passe");
+      showAlert("Erreur", "Veuillez entrer un mot de passe");
       return;
     }
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
-      Alert.alert("Erreur", "Veuillez entrer un email valide");
+      showAlert("Erreur", "Veuillez entrer un email valide");
       return;
     }
     if (password.length < 6) {
-      Alert.alert("Erreur", "Le mot de passe doit contenir au moins 6 caractères");
+      showAlert("Erreur", "Le mot de passe doit contenir au moins 6 caractères");
       return;
     }
 
@@ -86,14 +102,14 @@ export default function LoginScreen({ navigation }) {
       const { error } = await authService.signUp(email.trim(), password, {});
 
       if (error) {
-        Alert.alert("Erreur", error.message || "Une erreur est survenue lors de la création du compte");
+        showAlert("Erreur", error.message || "Une erreur est survenue lors de la création du compte");
         return;
       }
 
-      navigation.navigate("Tabs", { screen: "Home" });
+      goHome();
 
     } catch (e) {
-      Alert.alert("Erreur", "Une erreur inattendue est survenue");
+      showAlert("Erreur", "Une erreur inattendue est survenue");
       console.error("Erreur d'inscription:", e);
     } finally {
       setLoading(false);
@@ -102,12 +118,12 @@ export default function LoginScreen({ navigation }) {
 
   const handleForgotPassword = async () => {
     if (!email.trim()) {
-      Alert.alert("Email requis", "Renseigne ton email dans le champ prévu puis clique de nouveau sur \"Mot de passe oublié ?\".");
+      showAlert("Email requis", "Renseigne ton email puis clique de nouveau sur \"Mot de passe oublié ?\".");
       return;
     }
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
-      Alert.alert("Erreur", "Veuillez entrer un email valide");
+      showAlert("Erreur", "Veuillez entrer un email valide");
       return;
     }
 
@@ -115,12 +131,12 @@ export default function LoginScreen({ navigation }) {
     try {
       const { error } = await authService.resetPassword(email.trim());
       if (error) {
-        Alert.alert("Erreur", error.message || "Impossible d'envoyer l'email de réinitialisation");
+        showAlert("Erreur", error.message || "Impossible d'envoyer l'email de réinitialisation");
         return;
       }
-      Alert.alert("Email envoyé", "Si un compte existe avec cet email, un lien de réinitialisation a été envoyé.");
+      showAlert("Email envoyé", "Si un compte existe avec cet email, un lien de réinitialisation a été envoyé.");
     } catch (e) {
-      Alert.alert("Erreur", "Une erreur inattendue est survenue");
+      showAlert("Erreur", "Une erreur inattendue est survenue");
     } finally {
       setLoading(false);
     }
