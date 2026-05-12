@@ -25,12 +25,10 @@ export default function LoginScreen({ navigation }) {
       Alert.alert("Erreur", "Veuillez entrer votre email");
       return;
     }
-
     if (!password.trim()) {
       Alert.alert("Erreur", "Veuillez entrer votre mot de passe");
       return;
     }
-
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
       Alert.alert("Erreur", "Veuillez entrer un email valide");
@@ -38,13 +36,11 @@ export default function LoginScreen({ navigation }) {
     }
 
     setLoading(true);
-
     try {
-      const { data, error } = await authService.signIn(email.trim(), password);
+      const { error } = await authService.signIn(email.trim(), password);
 
       if (error) {
         let errorMessage = "Erreur de connexion";
-
         if (error.message.includes("Invalid login credentials")) {
           errorMessage = "Email ou mot de passe incorrect";
         } else if (error.message.includes("Email not confirmed")) {
@@ -52,28 +48,15 @@ export default function LoginScreen({ navigation }) {
         } else {
           errorMessage = error.message || "Une erreur est survenue";
         }
-
         Alert.alert("Erreur", errorMessage);
-        setLoading(false);
         return;
       }
 
-      if (!error) {
-        if (Platform.OS === "web") {
-          window.alert("Connexion réussie ! Bienvenue sur SpeedNation.");
-          navigation.navigate("Tabs", { screen: "Home" });
-        } else {
-          Alert.alert("Succès", "Connexion réussie ! Bienvenue sur SpeedNation.", [
-            {
-              text: "C'est parti",
-              onPress: () => navigation.navigate("Tabs", { screen: "Home" }),
-            },
-          ]);
-        }
-      }
-    } catch (error) {
+      navigation.navigate("Tabs", { screen: "Home" });
+
+    } catch (e) {
       Alert.alert("Erreur", "Une erreur inattendue est survenue");
-      console.error("Erreur de connexion:", error);
+      console.error("Erreur de connexion:", e);
     } finally {
       setLoading(false);
     }
@@ -84,55 +67,34 @@ export default function LoginScreen({ navigation }) {
       Alert.alert("Erreur", "Veuillez entrer votre email");
       return;
     }
-
     if (!password.trim()) {
       Alert.alert("Erreur", "Veuillez entrer un mot de passe");
       return;
     }
-
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
       Alert.alert("Erreur", "Veuillez entrer un email valide");
       return;
     }
-
     if (password.length < 6) {
       Alert.alert("Erreur", "Le mot de passe doit contenir au moins 6 caractères");
       return;
     }
 
     setLoading(true);
-
     try {
-      const { data, error } = await authService.signUp(email.trim(), password, {});
+      const { error } = await authService.signUp(email.trim(), password, {});
 
       if (error) {
-        let errorMessage = error.message || "Une erreur est survenue lors de la création du compte";
-        Alert.alert("Erreur", errorMessage);
-        setLoading(false);
+        Alert.alert("Erreur", error.message || "Une erreur est survenue lors de la création du compte");
         return;
       }
 
-      if (!error) {
-        if (Platform.OS === "web") {
-          window.alert("Bienvenue ! Ton compte a été créé et tu es maintenant connecté.");
-          navigation.navigate("Tabs", { screen: "Home" });
-        } else {
-          Alert.alert(
-            "Bienvenue !",
-            "Ton compte a été créé et tu es maintenant connecté.",
-            [
-              {
-                text: "C'est parti",
-                onPress: () => navigation.navigate("Tabs", { screen: "Home" }),
-              },
-            ]
-          );
-        }
-      }
-    } catch (error) {
+      navigation.navigate("Tabs", { screen: "Home" });
+
+    } catch (e) {
       Alert.alert("Erreur", "Une erreur inattendue est survenue");
-      console.error("Erreur d'inscription:", error);
+      console.error("Erreur d'inscription:", e);
     } finally {
       setLoading(false);
     }
@@ -140,13 +102,9 @@ export default function LoginScreen({ navigation }) {
 
   const handleForgotPassword = async () => {
     if (!email.trim()) {
-      Alert.alert(
-        "Email requis",
-        "Renseigne ton email dans le champ prévu puis clique de nouveau sur \"Mot de passe oublié ?\"."
-      );
+      Alert.alert("Email requis", "Renseigne ton email dans le champ prévu puis clique de nouveau sur \"Mot de passe oublié ?\".");
       return;
     }
-
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
       Alert.alert("Erreur", "Veuillez entrer un email valide");
@@ -157,18 +115,12 @@ export default function LoginScreen({ navigation }) {
     try {
       const { error } = await authService.resetPassword(email.trim());
       if (error) {
-        let message = error.message || "Impossible d'envoyer l'email de réinitialisation";
-        Alert.alert("Erreur", message);
+        Alert.alert("Erreur", error.message || "Impossible d'envoyer l'email de réinitialisation");
         return;
       }
-
-      Alert.alert(
-        "Email envoyé",
-        "Si un compte existe avec cet email, un lien de réinitialisation de mot de passe a été envoyé."
-      );
-    } catch (error) {
+      Alert.alert("Email envoyé", "Si un compte existe avec cet email, un lien de réinitialisation a été envoyé.");
+    } catch (e) {
       Alert.alert("Erreur", "Une erreur inattendue est survenue");
-      console.error("Erreur de réinitialisation de mot de passe:", error);
     } finally {
       setLoading(false);
     }
@@ -255,14 +207,9 @@ export default function LoginScreen({ navigation }) {
 
             <View style={styles.switchAuthRow}>
               <Text style={styles.switchAuthText}>
-                {isSignUpMode
-                  ? "Vous avez déjà un compte ?"
-                  : "Pas encore de compte ?"}
+                {isSignUpMode ? "Vous avez déjà un compte ?" : "Pas encore de compte ?"}
               </Text>
-              <TouchableOpacity
-                onPress={() => setIsSignUpMode((prev) => !prev)}
-                disabled={loading}
-              >
+              <TouchableOpacity onPress={() => setIsSignUpMode((prev) => !prev)} disabled={loading}>
                 <Text style={styles.switchAuthLink}>
                   {isSignUpMode ? "Se connecter" : "Créer un compte"}
                 </Text>
