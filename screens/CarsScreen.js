@@ -23,7 +23,7 @@ import { storageService } from "../services/storageService";
 import { getImageUrl } from "../services/apiService";
 
 export default function CarsScreen({ navigation }) {
-  const { user, profile, refreshUser, isAdmin } = useAuth();
+  const { user, profile, refreshUser, isAdmin, signOut } = useAuth();
   const [activeTab, setActiveTab] = useState("cars");
   const [cars, setCars] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -48,6 +48,19 @@ export default function CarsScreen({ navigation }) {
   const [editProfile, setEditProfile] = useState({
     full_name: "", profession: "", location: "", age: "", avatarUri: null, showAdminRole: true,
   });
+
+  const handleLogout = async () => {
+    try {
+      await signOut();
+      navigation.reset({
+        index: 0,
+        routes: [{ name: "Login" }],
+      });
+    } catch (e) {
+      console.error('Logout error', e);
+      Alert.alert('Erreur', 'Impossible de se déconnecter');
+    }
+  };
 
   const openFollowersModal = async (type) => {
     if (!user) return;
@@ -256,6 +269,21 @@ export default function CarsScreen({ navigation }) {
       <View style={styles.profileCard}>
         <TouchableOpacity style={styles.profileMenuButton} onPress={() => setShowEditProfileModal(true)}>
           <Text style={styles.menuText}>☰</Text>
+        </TouchableOpacity>
+
+        {/* Bouton déconnexion */}
+        <TouchableOpacity 
+          style={styles.logoutButton}
+          onPress={() => Alert.alert(
+            'Déconnexion',
+            'Voulez-vous vous déconnecter ?',
+            [
+              { text: 'Annuler', style: 'cancel' },
+              { text: 'Déconnexion', style: 'destructive', onPress: handleLogout },
+            ]
+          )}
+        >
+          <Ionicons name="log-out-outline" size={20} color="#f97373" />
         </TouchableOpacity>
 
         {isAdmin && (
@@ -565,8 +593,9 @@ const styles = StyleSheet.create({
     borderColor: COLORS.border 
   },
   profileMenuButton: { position: "absolute", top: 20, right: 20, padding: 5 },
+  logoutButton: { position: "absolute", top: 20, left: 20, padding: 5 },
   menuText: { color: COLORS.foreground, fontSize: 24 },
-  adminPanelButton: { position: "absolute", top: 20, left: 20, alignItems: "center" },
+  adminPanelButton: { position: "absolute", top: 70, left: 20, alignItems: "center" },
   adminPanelIcon: { color: COLORS.primary, fontSize: 24 },
   adminPanelText: { color: COLORS.primary, fontSize: 10, fontWeight: "700" },
   avatar: { width: 100, height: 100, borderRadius: 30, marginBottom: 15, borderWidth: 2, borderColor: COLORS.primary },

@@ -87,6 +87,11 @@ router.put('/events/:id/feature', async (req, res) => {
     const { id } = req.params;
     const { is_featured } = req.body;
     
+    // Si on veut mettre cet événement en avant, on enlève d'abord la mise en avant de TOUS les autres
+    if (is_featured === true) {
+      await query('UPDATE events SET is_featured = false WHERE id != $1', [id]);
+    }
+
     const result = await query(
       'UPDATE events SET is_featured = $1, updated_at = NOW() WHERE id = $2 RETURNING *',
       [is_featured, id]

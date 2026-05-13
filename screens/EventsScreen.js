@@ -5,7 +5,6 @@ import {
   StyleSheet, 
   TouchableOpacity, 
   ScrollView,
-  ImageBackground,
   ActivityIndicator,
   Alert,
   Modal,
@@ -57,21 +56,11 @@ export default function EventsScreen({ navigation, route }) {
 
   useEffect(() => {
     const unsubscribe = navigation.addListener('focus', () => {
-      // Rafraîchir les données à chaque fois que l'écran obtient le focus
       setRefreshTick(prev => prev + 1);
-    });
-
-    // Écouter les paramètres de navigation pour le rafraîchissement
-    const unsubscribeBeforeRemove = navigation.addListener('beforeRemove', (e) => {
-      // Vérifier si on revient du formulaire avec une demande de rafraîchissement
-      if (e.data?.action?.type === 'NAVIGATE' && e.data?.action?.payload?.params?.refresh) {
-        setRefreshTick(prev => prev + 1);
-      }
     });
 
     return () => {
       unsubscribe();
-      unsubscribeBeforeRemove();
     };
   }, [navigation]);
 
@@ -87,14 +76,12 @@ export default function EventsScreen({ navigation, route }) {
 
   const goCreate = () => navigation.navigate("EventForm", { 
     mode: "create",
-    // Ajouter un identifiant unique pour forcer le rafraîchissement au retour
     key: Date.now()
   });
   
   const goEdit = (event) => navigation.navigate("EventForm", { 
     mode: "edit", 
     event,
-    // Ajouter un identifiant unique pour forcer le rafraîchissement au retour
     key: Date.now()
   });
 
@@ -135,30 +122,23 @@ export default function EventsScreen({ navigation, route }) {
     if (!isAdmin) return;
 
     try {
-      // Si déjà mis en avant, on enlève la mise en avant
       if (event.is_featured) {
         const { error } = await eventService.clearFeaturedEvent(event.id);
         if (error) {
           console.error("Erreur clearFeaturedEvent:", error);
-          Alert.alert(
-            "Erreur",
-            error.message || "Impossible d'enlever la mise en avant"
-          );
+          Alert.alert("Erreur", error.message || "Impossible d'enlever la mise en avant");
           return;
         }
       } else {
         const { error } = await eventService.setFeaturedEvent(event.id);
         if (error) {
           console.error("Erreur setFeaturedEvent:", error);
-          Alert.alert(
-            "Erreur",
-            error.message || "Impossible de mettre cet événement en avant"
-          );
+          Alert.alert("Erreur", error.message || "Impossible de mettre cet événement en avant");
           return;
         }
       }
 
-      // Recharger la liste pour refléter le nouvel événement mis en avant
+      // Recharger la liste
       const { data, error: reloadError } = await eventService.getAllEvents();
       if (reloadError) {
         console.error("Erreur de rechargement des événements:", reloadError);
@@ -202,7 +182,7 @@ export default function EventsScreen({ navigation, route }) {
               style={styles.featureLink}
             >
               <Text style={styles.featureLinkText}>
-                {item.is_featured ? "Enlever la mise en avant" : "Mettre en avant"}
+                {item.is_featured ? "✕ Enlever" : "⭐ Mettre en avant"}
               </Text>
             </TouchableOpacity>
 
@@ -230,7 +210,7 @@ export default function EventsScreen({ navigation, route }) {
         <Ionicons
           name={favoriteIds.includes(item.id) ? "heart" : "heart-outline"}
           size={20}
-          color={favoriteIds.includes(item.id) ? "#ffffff" : "#ffffff"}
+          color="#ffffff"
         />
       </TouchableOpacity>
     </View>
@@ -266,12 +246,26 @@ export default function EventsScreen({ navigation, route }) {
           />
           <View style={styles.heroOverlay}>
             {isAdmin && (
-              <TouchableOpacity
-                style={styles.heroEditLink}
-                onPress={() => goEdit(featuredEvent)}
-              >
-                <Text style={styles.heroEditText}>Modifier</Text>
-              </TouchableOpacity>
+              <View style={styles.heroAdminRow}>
+                <TouchableOpacity
+                  style={styles.heroAdminBtn}
+                  onPress={() => handleSetFeatured(featuredEvent)}
+                >
+                  <Text style={styles.heroAdminBtnText}>✕ Enlever</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.heroSmallBtn}
+                  onPress={() => goEdit(featuredEvent)}
+                >
+                  <Text style={styles.heroSmallBtnText}>Modifier</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.heroSmallBtn, { backgroundColor: 'rgba(153,27,27,0.7)' }]}
+                  onPress={() => handleDeleteEvent(featuredEvent)}
+                >
+                  <Text style={[styles.heroSmallBtnText, { color: '#fecaca' }]}>Supprimer</Text>
+                </TouchableOpacity>
+              </View>
             )}
 
             {featuredEvent.visibility !== "public" && (
@@ -291,9 +285,8 @@ export default function EventsScreen({ navigation, route }) {
                   <Text style={styles.heroBadgeText}>Événement mis en avant</Text>
                 </View>
               )}
-
               <TouchableOpacity style={styles.heroButton}>
-                <Text style={styles.heroButtonText}>S’inscrire</Text>
+                <Text style={styles.heroButtonText}>S'inscrire</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -306,7 +299,8 @@ export default function EventsScreen({ navigation, route }) {
     <View style={styles.container}>
       {/* --- MODALE CONFIRMATION SUPPRESSION --- */}
       <Modal visible={showDeleteModal} transparent animationType="fade" onRequestClose={() => setShowDeleteModal(false)}>
-        <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setShowDeleteModal(false)}>
+        <View style={styles.modalOverlay}>
+          <TouchableOpacity style={StyleSheet.absoluteFill} activeOpacity={1} onPress={() => setShowDeleteModal(false)} />
           <View style={styles.deleteModalBox}>
             <Text style={styles.deleteModalTitle}>Supprimer l'événement</Text>
             <Text style={styles.deleteModalText}>
@@ -328,7 +322,7 @@ export default function EventsScreen({ navigation, route }) {
               </TouchableOpacity>
             </View>
           </View>
-        </TouchableOpacity>
+        </View>
       </Modal>
 
       {loading ? (
@@ -432,23 +426,39 @@ const styles = StyleSheet.create({
   },
   heroOverlay: {
     flex: 1,
-    backgroundColor: "rgba(11, 8, 19, 0.4)",
+    backgroundColor: "rgba(11, 8, 19, 0.45)",
     paddingHorizontal: 20,
     paddingVertical: 20,
     justifyContent: "flex-end",
   },
-  heroEditLink: {
+  heroAdminRow: {
     position: 'absolute',
-    top: 15,
-    right: 15,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 12,
+    top: 12,
+    right: 12,
+    flexDirection: 'row',
+    gap: 6,
+    zIndex: 10,
   },
-  heroEditText: {
-    fontSize: 11,
-    color: "#fff",
+  heroAdminBtn: {
+    backgroundColor: 'rgba(137,22,203,0.75)',
+    paddingHorizontal: 9,
+    paddingVertical: 5,
+    borderRadius: 10,
+  },
+  heroAdminBtnText: {
+    fontSize: 10,
+    color: '#fff',
+    fontWeight: '700',
+  },
+  heroSmallBtn: {
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    paddingHorizontal: 9,
+    paddingVertical: 5,
+    borderRadius: 10,
+  },
+  heroSmallBtnText: {
+    fontSize: 10,
+    color: '#fff',
     fontWeight: '600',
   },
   heroTitle: {
@@ -486,8 +496,8 @@ const styles = StyleSheet.create({
   },
   heroPrivateTag: {
     position: 'absolute',
-    top: 15,
-    left: 15,
+    top: 12,
+    left: 12,
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: 999,
@@ -578,8 +588,12 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     marginTop: 8,
-    gap: 15,
+    gap: 12,
+    flexWrap: 'wrap',
   },
+  featureLink: {},
+  editLink: {},
+  deleteLink: {},
   editLinkText: {
     fontSize: 11,
     color: COLORS.mutedForeground,
@@ -660,5 +674,4 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     fontSize: 14,
   },
-
 });
