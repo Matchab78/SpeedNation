@@ -1,8 +1,13 @@
+require('dotenv').config();
 const { query } = require('./config/database');
 const bcrypt = require('bcryptjs');
 const { v4: uuidv4 } = require('uuid');
 
 async function seed() {
+  if (!process.env.DB_PASSWORD) {
+    console.error('ERREUR: DB_PASSWORD est indéfini. Vérifiez votre fichier .env ou vos variables d\'environnement Docker.');
+    process.exit(1);
+  }
   console.log('--- Démarrage de l\'injection de données ---');
 
   const passwordHash = await bcrypt.hash('admin123', 10);
